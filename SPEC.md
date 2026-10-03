@@ -101,8 +101,8 @@ minimal shadows, iOS-level polish that also feels native on Android.
 | `primaryPressed` | `#2349B5` | `#8AA8FF` |
 | `primarySubtle` | `#EAF0FD` | `#1C2643` |
 | `onPrimary` | `#FFFFFF` | `#0E1013` |
-| `success` | `#1F8A4C` | `#3FBF77` |
-| `warning` | `#B26B00` | `#E3A23B` |
+| `success` | `#1B7D45` | `#3FBF77` |
+| `warning` | `#9E5F00` | `#E3A23B` |
 | `danger` | `#C93A3A` | `#F06A6A` |
 | `fieldHighlight` | `#FFF4D6` | `#3A3016` |
 

@@ -47,9 +47,12 @@ export async function getDownloadUrl(
   const fileName = downloadFileName(doc.title);
   const { data, error } = await ctx.admin.storage
     .from('documents')
-    .createSignedUrl(doc.original_path, SIGNED_URL_TTL_SECONDS, { download: fileName });
+    .createSignedUrl(doc.original_path, SIGNED_URL_TTL_SECONDS);
   if (error || !data) throw error ?? new Error('Could not sign URL');
 
   await logEvent(ctx, doc.id, 'DOCUMENT_DOWNLOADED', 'Document downloaded', { kind: input.kind });
-  return { url: data.signedUrl, expires_in: SIGNED_URL_TTL_SECONDS, file_name: fileName };
+  // The `download` parameter is not covered by the token, so append it ourselves, encoded exactly
+  // once: storage-js's `download` option double-encodes characters such as parentheses.
+  const url = `${data.signedUrl}&download=${encodeURIComponent(fileName)}`;
+  return { url, expires_in: SIGNED_URL_TTL_SECONDS, file_name: fileName };
 }

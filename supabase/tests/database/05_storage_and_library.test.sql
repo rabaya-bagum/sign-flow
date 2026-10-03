@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(37);
+select plan(40);
 
 \ir fixtures.psql
 
@@ -100,6 +100,8 @@ select is_empty($$ select 1 from public.list_documents('all', 'A completed', 'ne
   'hidden documents disappear from lists');
 select results_eq($$ select count(*)::int from public.documents where id = 'd0000000-0000-4000-8000-0000000000d3' $$,
   array[1], 'hidden documents stay reachable by direct link');
+select results_eq($$ select display_status, hidden, is_owner from public.get_document('d0000000-0000-4000-8000-0000000000d3') $$,
+  $$ values ('completed'::text, true, true) $$, 'get_document works for hidden documents and reports them as hidden');
 
 -- Leakage: strangers and other users' recipients -------------------------------------------------
 select set_config('request.jwt.claims', '{"sub":"eeeeeeee-0000-4000-8000-000000000005","role":"authenticated"}', true);
@@ -108,6 +110,8 @@ select is_empty($$ select 1 from public.search_documents('b@test.local') $$,
   'searching for another user''s recipient email returns nothing');
 select is_empty($$ select 1 from public.list_documents('all', null, 'newest', '{"recipient": "User B"}', null, null, 50) $$,
   'recipient filter cannot reveal other users'' documents');
+select is_empty($$ select 1 from public.get_document('d0000000-0000-4000-8000-0000000000d2') $$,
+  'get_document returns nothing for documents the caller cannot access');
 
 -- Seed: buckets agree with the dashboard; keyset pagination is complete and duplicate-free --------
 select set_config('request.jwt.claims', '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated"}', true);
@@ -163,6 +167,8 @@ select results_eq(
   'seed recipient: list buckets match dashboard counts');
 select is_empty($$ select 1 from public.list_documents('all', 'Vendor', 'newest', '{}', null, null, 50) $$,
   'seed recipient cannot find the document where she is CC before completion');
+select results_eq($$ select display_status, is_owner from public.get_document('a0000000-0000-4000-8000-000000000002') $$,
+  $$ values ('needs_signature'::text, false) $$, 'get_document uses the same per-viewer display status as lists');
 
 reset role;
 select results_eq($$ select public.check_rate_limit('pgtap', 2, 60), public.check_rate_limit('pgtap', 2, 60), public.check_rate_limit('pgtap', 2, 60) $$,

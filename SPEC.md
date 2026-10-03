@@ -28,6 +28,7 @@ the app. It is inspired by tools such as DocuSign and Adobe Acrobat Sign, but ha
 branding**. No third-party trademarks, icons, layouts, colors, or copyrighted UI assets may be copied.
 
 ### 1.1 Core jobs to be done
+
 1. **Sign** a document someone sent me, in the app or via an email link.
 2. **Request signatures**: upload a PDF, add recipients, place fields, and send.
 3. **Track** every document's status and audit trail.
@@ -35,46 +36,47 @@ branding**. No third-party trademarks, icons, layouts, colors, or copyrighted UI
 
 ### 1.2 MVP scope summary
 
-| Area | MUST | SHOULD | LATER |
-|---|---|---|---|
-| Auth | Email/password, email verification, reset, Apple, Google | Biometric unlock, TOTP 2FA | Enterprise SSO |
-| Upload | PDF from Files, camera scan → PDF, images → PDF | — | Cloud drives (Drive, Dropbox, OneDrive, Box) |
-| Recipients | Signer, CC, signing order (sequential + parallel groups) | Approver, Viewer | Templates, bulk send |
-| Fields | Signature, Initials, Name, Date signed, Text, Checkbox | Email, Radio group, Dropdown | Stamp, formulas, conditional fields |
-| Signing | In-app signing, guest web signing, decline | Email OTP for "require authentication" | SMS OTP, ID verification |
-| Output | Flattened PDF, original preserved, audit certificate, SHA-256 hashes | Hash-chained audit log | PAdES digital signatures |
-| Notifications | Email for requests/completion, in-app notifications | Push, reminders, expiry | Webhooks |
-| Docs library | List, filter, search, sort, rename, download/share, void, delete draft | Duplicate, grid view | Folders, tags |
-| Account | Profile, saved signatures, theme, logout, **account deletion** | Notification prefs, language | Teams, orgs, branding, plans |
+| Area          | MUST                                                                   | SHOULD                                 | LATER                                        |
+| ------------- | ---------------------------------------------------------------------- | -------------------------------------- | -------------------------------------------- |
+| Auth          | Email/password, email verification, reset, Apple, Google               | Biometric unlock, TOTP 2FA             | Enterprise SSO                               |
+| Upload        | PDF from Files, camera scan → PDF, images → PDF                        | —                                      | Cloud drives (Drive, Dropbox, OneDrive, Box) |
+| Recipients    | Signer, CC, signing order (sequential + parallel groups)               | Approver, Viewer                       | Templates, bulk send                         |
+| Fields        | Signature, Initials, Name, Date signed, Text, Checkbox                 | Email, Radio group, Dropdown           | Stamp, formulas, conditional fields          |
+| Signing       | In-app signing, guest web signing, decline                             | Email OTP for "require authentication" | SMS OTP, ID verification                     |
+| Output        | Flattened PDF, original preserved, audit certificate, SHA-256 hashes   | Hash-chained audit log                 | PAdES digital signatures                     |
+| Notifications | Email for requests/completion, in-app notifications                    | Push, reminders, expiry                | Webhooks                                     |
+| Docs library  | List, filter, search, sort, rename, download/share, void, delete draft | Duplicate, grid view                   | Folders, tags                                |
+| Account       | Profile, saved signatures, theme, logout, **account deletion**         | Notification prefs, language           | Teams, orgs, branding, plans                 |
 
 ---
 
 ## 2. Technology stack
 
-| Concern | Choice | Notes |
-|---|---|---|
-| App | React Native + **Expo** (latest stable SDK at project start, record the version in README) | **Dev builds via EAS. Expo Go is not supported** (native modules required) |
-| Language | TypeScript, `strict: true` | No `any` without a justifying comment |
-| Navigation | Expo Router (file-based) | Also used for the **web export** of the guest signing page |
-| Server state | TanStack Query | Query keys centralized in `lib/queryKeys.ts` |
-| Client state | Zustand | UI/session-only state; never cache server data here |
-| Forms | React Hook Form + Zod | Zod schemas shared between client and Edge Functions where possible (`/shared`) |
-| Backend | Supabase: Postgres, Auth, Storage, Edge Functions (Deno) | Local dev via Supabase CLI; **all schema changes as migrations** |
-| Scheduling | `pg_cron` + `pg_net` → Edge Function | Reminders, expiry, cleanup |
-| Email | Resend (behind an `EmailProvider` interface) | Supabase only sends auth emails; transactional email is ours |
-| Push | `expo-notifications` + Expo Push API (called from Edge Functions) | |
-| PDF render (app) | **pdf.js inside `react-native-webview`** for the editor and signing views; pdf.js directly on web | One rendering engine = one coordinate system on native and web. `react-native-pdf` is acceptable for plain read-only preview. **Validate with the Phase 3 spike (§20)** |
-| PDF processing (server) | `pdf-lib` in Edge Functions | Page metadata extraction, image→PDF, flattening, certificate generation |
-| File picking | `expo-document-picker`, `expo-image-picker` | |
-| Document scan | `react-native-document-scanner-plugin` | Requires a dev build |
-| Signature canvas | `react-native-signature-canvas` or a Skia-based canvas | Must export a transparent PNG and support undo |
-| Secure storage | `expo-secure-store` (with the large-value encrypted-storage pattern for the Supabase session) | |
-| Biometrics | `expo-local-authentication` | SHOULD |
-| Apple / Google sign-in | `expo-apple-authentication`, `@react-native-google-signin/google-signin` → `supabase.auth.signInWithIdToken` | |
-| Haptics | `expo-haptics` | |
-| i18n | `i18next` + `react-i18next`, English only at launch | All user-facing strings go through `t()` from P1 |
-| Crash reporting | Sentry (`@sentry/react-native`) | SHOULD, P8 |
-| Testing | Jest + React Native Testing Library, pgTAP (DB/RLS), Deno test (Edge Functions), Maestro (E2E) | See §19 |
+| Concern                 | Choice                                                                                                       | Notes                                                                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| App                     | React Native + **Expo** (latest stable SDK at project start, record the version in README)                   | **Dev builds via EAS. Expo Go is not supported** (native modules required)                                                                                              |
+| Language                | TypeScript, `strict: true`                                                                                   | No `any` without a justifying comment                                                                                                                                   |
+| Navigation              | Expo Router (file-based)                                                                                     | Also used for the **web export** of the guest signing page                                                                                                              |
+| Server state            | TanStack Query                                                                                               | Query keys centralized in `lib/queryKeys.ts`                                                                                                                            |
+| Client state            | Zustand                                                                                                      | UI/session-only state; never cache server data here                                                                                                                     |
+| Forms                   | React Hook Form + Zod                                                                                        | Zod schemas shared between client and Edge Functions where possible (`/shared`)                                                                                         |
+| Backend                 | Supabase: Postgres, Auth, Storage, Edge Functions (Deno)                                                     | Local dev via Supabase CLI; **all schema changes as migrations**                                                                                                        |
+| Scheduling              | `pg_cron` + `pg_net` → Edge Function                                                                         | Reminders, expiry, cleanup                                                                                                                                              |
+| Email                   | Resend (behind an `EmailProvider` interface)                                                                 | Supabase only sends auth emails; transactional email is ours                                                                                                            |
+| Push                    | `expo-notifications` + Expo Push API (called from Edge Functions)                                            |                                                                                                                                                                         |
+| PDF render (app)        | **pdf.js inside `react-native-webview`** for the editor and signing views; pdf.js directly on web            | One rendering engine = one coordinate system on native and web. `react-native-pdf` is acceptable for plain read-only preview. **Validate with the Phase 3 spike (§20)** |
+| PDF processing (server) | `pdf-lib` in Edge Functions                                                                                  | Page metadata extraction, image→PDF, flattening, certificate generation                                                                                                 |
+| File picking            | `expo-document-picker`, `expo-image-picker`                                                                  |                                                                                                                                                                         |
+| Resumable uploads       | Built-in TUS 1.0 client (`src/features/upload/resumable.ts`) over `expo/fetch`                               | Above 6 MB. `tus-js-client` was not used: on React Native its Blob path re-reads the whole file for every chunk                                                         |
+| Document scan           | `react-native-document-scanner-plugin`                                                                       | Requires a dev build                                                                                                                                                    |
+| Signature canvas        | `react-native-signature-canvas` or a Skia-based canvas                                                       | Must export a transparent PNG and support undo                                                                                                                          |
+| Secure storage          | `expo-secure-store` (with the large-value encrypted-storage pattern for the Supabase session)                |                                                                                                                                                                         |
+| Biometrics              | `expo-local-authentication`                                                                                  | SHOULD                                                                                                                                                                  |
+| Apple / Google sign-in  | `expo-apple-authentication`, `@react-native-google-signin/google-signin` → `supabase.auth.signInWithIdToken` |                                                                                                                                                                         |
+| Haptics                 | `expo-haptics`                                                                                               |                                                                                                                                                                         |
+| i18n                    | `i18next` + `react-i18next`, English only at launch                                                          | All user-facing strings go through `t()` from P1                                                                                                                        |
+| Crash reporting         | Sentry (`@sentry/react-native`)                                                                              | SHOULD, P8                                                                                                                                                              |
+| Testing                 | Jest + React Native Testing Library, pgTAP (DB/RLS), Deno test (Edge Functions), Maestro (E2E)               | See §19                                                                                                                                                                 |
 
 **Hard rule:** no secret keys in the app bundle. The app only holds the Supabase URL and the **anon key**.
 Service-role keys, Resend keys, and similar live only in Edge Function secrets.
@@ -88,27 +90,28 @@ minimal shadows, iOS-level polish that also feels native on Android.
 
 ### 3.1 Color tokens
 
-| Token | Light | Dark |
-|---|---|---|
-| `background` | `#FFFFFF` | `#0E1013` |
-| `surface` | `#F7F8FA` | `#171A1F` |
+| Token             | Light     | Dark      |
+| ----------------- | --------- | --------- |
+| `background`      | `#FFFFFF` | `#0E1013` |
+| `surface`         | `#F7F8FA` | `#171A1F` |
 | `surfaceElevated` | `#FFFFFF` | `#1E2228` |
-| `border` | `#E4E7EC` | `#2C313A` |
-| `textPrimary` | `#1F2328` | `#ECEEF1` |
-| `textSecondary` | `#5B6270` | `#A6ADB8` |
-| `textTertiary` | `#8A919E` | `#757D8A` |
-| `primary` | `#2B59D9` | `#6E93FF` |
-| `primaryPressed` | `#2349B5` | `#8AA8FF` |
-| `primarySubtle` | `#EAF0FD` | `#1C2643` |
-| `onPrimary` | `#FFFFFF` | `#0E1013` |
-| `success` | `#1B7D45` | `#3FBF77` |
-| `warning` | `#9E5F00` | `#E3A23B` |
-| `danger` | `#C93A3A` | `#F06A6A` |
-| `fieldHighlight` | `#FFF4D6` | `#3A3016` |
+| `border`          | `#E4E7EC` | `#2C313A` |
+| `textPrimary`     | `#1F2328` | `#ECEEF1` |
+| `textSecondary`   | `#5B6270` | `#A6ADB8` |
+| `textTertiary`    | `#8A919E` | `#757D8A` |
+| `primary`         | `#2B59D9` | `#6E93FF` |
+| `primaryPressed`  | `#2349B5` | `#8AA8FF` |
+| `primarySubtle`   | `#EAF0FD` | `#1C2643` |
+| `onPrimary`       | `#FFFFFF` | `#0E1013` |
+| `success`         | `#1B7D45` | `#3FBF77` |
+| `warning`         | `#9E5F00` | `#E3A23B` |
+| `danger`          | `#C93A3A` | `#F06A6A` |
+| `fieldHighlight`  | `#FFF4D6` | `#3A3016` |
 
 Text and interactive colors must meet WCAG AA contrast against their background. Verify this in P1.
 
 ### 3.2 Scales
+
 - **Spacing:** 4, 8, 12, 16, 20, 24, 32, 40, 48
 - **Radius:** `sm` 8, `md` 12, `lg` 16, `xl` 24, `full`
 - **Elevation:** `none`, `card` (light: 0 1 2 rgba(16,24,40,0.05); dark: no shadow, use a border), `sheet`
@@ -120,15 +123,15 @@ Text and interactive colors must meet WCAG AA contrast against their background.
 
 ### 3.3 Status presentation
 
-| Display status | Badge color | Icon idea |
-|---|---|---|
-| Draft | neutral (`textSecondary` on `surface`) | pencil |
-| Needs your signature | `warning` | pen |
-| Waiting for others | `primary` | clock |
-| Completed | `success` | check-circle |
-| Declined | `danger` | x-circle |
-| Voided | neutral, struck label | slash-circle |
-| Expired | neutral | hourglass |
+| Display status       | Badge color                            | Icon idea    |
+| -------------------- | -------------------------------------- | ------------ |
+| Draft                | neutral (`textSecondary` on `surface`) | pencil       |
+| Needs your signature | `warning`                              | pen          |
+| Waiting for others   | `primary`                              | clock        |
+| Completed            | `success`                              | check-circle |
+| Declined             | `danger`                               | x-circle     |
+| Voided               | neutral, struck label                  | slash-circle |
+| Expired              | neutral                                | hourglass    |
 
 The display status is **derived per viewer** (see §6.3), not stored.
 
@@ -187,6 +190,7 @@ Deep link scheme: `signflow://`. Universal/App Links domain: `sign.<your-domain>
 ## 5. Screens
 
 ### 5.1 Home `[P1 shell, data P2+]` MUST
+
 - **Header:** large title "Home", plus search, new (+), and notifications (with an unread dot) buttons.
 - **Summary card:** four rows, each with a count and a chevron, each linking to Documents pre-filtered:
   Needs your signature · Waiting for others · Drafts · Completed. The bucket definitions are in §6.3.
@@ -196,10 +200,12 @@ Deep link scheme: `signflow://`. Universal/App Links domain: `sign.<your-domain>
 - Pull-to-refresh, skeleton loading, and an empty state.
 
 ### 5.2 Documents `[P2]` MUST
+
 - **Segmented filters:** All · Needs signature · Waiting · Drafts · Completed · Voided (Voided also
   includes Declined and Expired, under the label "Closed").
-- Search field, sort (newest/oldest/title), and a filter sheet (status, created date range, modified date
-  range, sender, recipient).
+- Search field, sort (newest/oldest/title), and a filter sheet (status via the segments; created and
+  modified date ranges as presets: any time, last 7 days, last 30 days, last 12 months; sender from the
+  senders of accessible documents; recipient name/email text). Custom date ranges: LATER.
 - Grid/list toggle: SHOULD.
 - **Card:** title, updated date, participant avatars (max 3 + "+n"), status badge, progress ("2 of 3
   signed"), file size, and a ⋯ menu.
@@ -209,6 +215,7 @@ Deep link scheme: `signflow://`. Universal/App Links domain: `sign.<your-domain>
 - Infinite scroll (cursor pagination, 20 per page).
 
 ### 5.3 Creation wizard `[P2–P5]` MUST
+
 A single linear flow with a step indicator. Users can go back without losing state. Drafts are saved
 server-side as soon as step 1's file is uploaded (title defaults to the file name).
 
@@ -225,6 +232,7 @@ server-side as soon as step 1's file is uploaded (title defaults to the file nam
    and every required field is assigned.
 
 ### 5.4 Document details `[P2 basic, P5–P7 full]` MUST
+
 - Title, plus a status banner (display status + one-line explanation, e.g. "Waiting for Aaliyah
   Fatimah").
 - **Info:** pages, file size, created, last updated, sender.
@@ -235,6 +243,7 @@ server-side as soon as step 1's file is uploaded (title defaults to the file nam
   Download (original / completed / certificate) · Share · Void · Delete.
 
 ### 5.5 Signing experience `[P6]` MUST
+
 - PDF pages scroll vertically; the user can pinch-zoom and jump to a page.
 - The recipient's fields are highlighted (`fieldHighlight`) and other recipients' fields are hidden.
   Fields completed by earlier recipients are shown as rendered values.
@@ -248,6 +257,7 @@ server-side as soon as step 1's file is uploaded (title defaults to the file nam
 - ⋯ menu: Decline (with a required reason, if allowed), View details, Download original.
 
 ### 5.6 Field editor `[P4]` MUST
+
 - **Top bar:** Back · title · Save · Next.
 - Vertical pages, zoom, page thumbnails/jump.
 - **Bottom toolbar:** field types per the §1.2 priority tags.
@@ -261,6 +271,7 @@ server-side as soon as step 1's file is uploaded (title defaults to the file nam
 - Autosave (debounced) to `document_fields`.
 
 ### 5.7 Signature creation `[P3]` MUST
+
 - Tabs: **Draw** (canvas, Clear, Undo, Save) · **Type** (name with 3 script-style fonts that are
   bundled and licensed for embedding) · **Upload** (image; background removed by threshold, cropped).
 - Signature and initials are handled separately.
@@ -269,17 +280,20 @@ server-side as soon as step 1's file is uploaded (title defaults to the file nam
   document's storage path, so deleting a saved signature later never changes a signed document.
 
 ### 5.8 Activity tab `[P7]` MUST
+
 - Global, reverse-chronological feed of events across all documents the user can access.
 - Each row shows event icon, description, actor, document title, and timestamp. Tapping a row opens the
   document.
 - Filter by event type: SHOULD.
 
 ### 5.9 Global search `[P2]` MUST
+
 - Searches document titles, recipient names, and recipient emails within documents the user can access.
 - Debounced (300 ms). Implemented with a Postgres RPC using `ILIKE` + `pg_trgm` index (full-text search
   LATER). Results are grouped by document.
 
 ### 5.10 Account `[P1 basic, P3/P7/P8 full]`
+
 - **Profile** `[P1]`: name, email (read-only, change via a verified flow LATER), photo `[P2]`, phone.
 - **Signatures** `[P3]`: saved signature and initials. Set default, delete.
 - **Security** `[P8]`: change password, biometric unlock (SHOULD), 2FA TOTP (SHOULD), "Sign out of all
@@ -295,6 +309,7 @@ server-side as soon as step 1's file is uploaded (title defaults to the file nam
 - **Log out** `[P1]`.
 
 ### 5.11 Auth & onboarding `[P1]` MUST
+
 - **Splash:** brand mark, restore session, then redirect.
 - **Onboarding** (first launch only), 3 cards:
   1. "Sign documents anywhere": Upload documents and add your signature securely.
@@ -307,6 +322,7 @@ server-side as soon as step 1's file is uploaded (title defaults to the file nam
 - **Forgot / reset password:** email entry, deep link to `reset-password`, new password + confirm.
 
 ### 5.12 Guest signing page `[P6]` MUST
+
 - Route `(guest)/s/[token]`, built with Expo Router's web export and hosted on the signing domain.
   The same URL is a universal/App Link, so it opens the app if installed.
 - Flow: token check → (optional email OTP) → ESIGN consent → signing UI (shared components with §5.5,
@@ -320,41 +336,41 @@ server-side as soon as step 1's file is uploaded (title defaults to the file nam
 
 ### 6.1 Roles
 
-| Role | Gets fields? | Must act? | When notified | Can see document |
-|---|---|---|---|---|
-| **Signer** | Yes (≥1 signature field required) | Fill required fields, then Finish | When their order group activates | From activation |
-| **Approver** (SHOULD) | No | Approve or Decline | When their order group activates | From activation |
-| **Viewer** (SHOULD) | No | No | When their order group activates (view-only link) | From activation |
-| **CC** | No | No | Only at completion (receives the final PDF + certificate) | After completion |
+| Role                  | Gets fields?                      | Must act?                         | When notified                                             | Can see document |
+| --------------------- | --------------------------------- | --------------------------------- | --------------------------------------------------------- | ---------------- |
+| **Signer**            | Yes (≥1 signature field required) | Fill required fields, then Finish | When their order group activates                          | From activation  |
+| **Approver** (SHOULD) | No                                | Approve or Decline                | When their order group activates                          | From activation  |
+| **Viewer** (SHOULD)   | No                                | No                                | When their order group activates (view-only link)         | From activation  |
+| **CC**                | No                                | No                                | Only at completion (receives the final PDF + certificate) | After completion |
 
 ### 6.2 Document state machine
 
 **Document status** (stored): `draft` → `in_progress` → `completed` | `declined` | `expired` | `voided`
 
-| From | Event | To | Who / where |
-|---|---|---|---|
-| — | create | `draft` | owner (client insert, RLS) |
-| `draft` | send | `in_progress` | owner → `send-document` Edge Function |
-| `in_progress` | last signer/approver completes | `completed` | `submit-signing` → `finalize-document` |
-| `in_progress` | a signer/approver declines | `declined` | `decline` Edge Function |
-| `in_progress` | `expires_at` passes | `expired` | cron |
-| `in_progress` | owner voids (reason required) | `voided` | `void-document` Edge Function |
+| From          | Event                          | To            | Who / where                            |
+| ------------- | ------------------------------ | ------------- | -------------------------------------- |
+| —             | create                         | `draft`       | owner (client insert, RLS)             |
+| `draft`       | send                           | `in_progress` | owner → `send-document` Edge Function  |
+| `in_progress` | last signer/approver completes | `completed`   | `submit-signing` → `finalize-document` |
+| `in_progress` | a signer/approver declines     | `declined`    | `decline` Edge Function                |
+| `in_progress` | `expires_at` passes            | `expired`     | cron                                   |
+| `in_progress` | owner voids (reason required)  | `voided`      | `void-document` Edge Function          |
 
 `completed`, `declined`, `expired`, and `voided` are **terminal**. The client can never update
 `documents.status` directly: RLS and column privileges forbid it.
 
 **Allowed actions by status (owner):**
 
-| Action | draft | in_progress | completed | declined/expired/voided |
-|---|---|---|---|---|
-| Edit title/fields/recipients | ✅ | ❌ (SHOULD: edit an un-acted recipient's name/email) | ❌ | ❌ |
-| Send | ✅ | — | — | — |
-| Remind | — | ✅ (rate-limited: 1 per recipient per 24 h) | — | — |
-| Void | — | ✅ | ❌ | ❌ |
-| Duplicate (SHOULD) | ✅ | ✅ | ✅ | ✅ (creates a new draft from the original PDF + fields) |
-| Download original | ✅ | ✅ | ✅ | ✅ |
-| Download completed + certificate | — | — | ✅ | — |
-| Delete | ✅ soft delete (`deleted_at`), files removed | ❌ (void first) | Hide from my library | Hide from my library |
+| Action                           | draft                                        | in_progress                                          | completed            | declined/expired/voided                                 |
+| -------------------------------- | -------------------------------------------- | ---------------------------------------------------- | -------------------- | ------------------------------------------------------- |
+| Edit title/fields/recipients     | ✅                                           | ❌ (SHOULD: edit an un-acted recipient's name/email) | ❌                   | ❌                                                      |
+| Send                             | ✅                                           | —                                                    | —                    | —                                                       |
+| Remind                           | —                                            | ✅ (rate-limited: 1 per recipient per 24 h)          | —                    | —                                                       |
+| Void                             | —                                            | ✅                                                   | ❌                   | ❌                                                      |
+| Duplicate (SHOULD)               | ✅                                           | ✅                                                   | ✅                   | ✅ (creates a new draft from the original PDF + fields) |
+| Download original                | ✅                                           | ✅                                                   | ✅                   | ✅                                                      |
+| Download completed + certificate | —                                            | —                                                    | ✅                   | —                                                       |
+| Delete                           | ✅ soft delete (`deleted_at`), files removed | ❌ (void first)                                      | Hide from my library | Hide from my library                                    |
 
 **Deleting a draft** is done through the `delete-draft` Edge Function: it sets `documents.deleted_at`, removes its storage objects immediately, and logs `DOCUMENT_DELETED`. Soft-deleted rows are excluded by RLS and every RPC. The row is kept so the append-only audit log never dangles.
 **"Delete" after sending only hides the document for that user** (`document_user_state.hidden_at`).
@@ -364,24 +380,27 @@ Recipients keep their access. Records are retained per §17.2.
 `declined`. CC: `pending` → `sent` at completion. When a document goes `voided` or `expired`, recipients
 who haven't acted stay as they are and the document status explains why.
 
-**Signing order:** recipients with the same `signing_order` act **in parallel**. Group *n+1* activates
-only when every signer/approver in group *n* has completed. `documents.current_signing_order` tracks the
+**Signing order:** recipients with the same `signing_order` act **in parallel**. Group _n+1_ activates
+only when every signer/approver in group _n_ has completed. `documents.current_signing_order` tracks the
 active group. Viewers in a group don't block it.
 
 ### 6.3 Per-viewer display buckets (derived, never stored)
-For the current user *U*:
-- **Needs your signature:** document `in_progress`, *U* is a signer/approver recipient
+
+For the current user _U_:
+
+- **Needs your signature:** document `in_progress`, _U_ is a signer/approver recipient
   (`user_id = U`) with status `sent|viewed`, and their `signing_order = current_signing_order`.
-- **Waiting for others:** document `in_progress`, *U* is the owner or has already completed, and *U* has
+- **Waiting for others:** document `in_progress`, _U_ is the owner or has already completed, and _U_ has
   no pending action.
-- **Drafts:** owner = *U*, status `draft`.
-- **Completed:** status `completed`, *U* is the owner or a participant.
+- **Drafts:** owner = _U_, status `draft`.
+- **Completed:** status `completed`, _U_ is the owner or a participant.
 - **Closed:** `declined|expired|voided`.
 
 Implement these as a single SQL function `get_dashboard_summary()` plus a `list_documents(bucket, …)`
 RPC so the client logic stays thin and the definitions live in one place.
 
 ### 6.4 Linking recipients to accounts
+
 Recipients are invited by email. When a user with a **verified** email signs in, a security-definer
 function links any `document_recipients` rows with a matching email (case-insensitive) and
 `user_id IS NULL` to that user. RLS then grants in-app access. Until then they sign through the guest link.
@@ -617,6 +636,7 @@ create table rate_limits (               -- simple fixed-window limiter for Edge
 `document_recipients.name`, and `document_recipients.email`.
 
 **Field `properties` (Zod, `/shared/fields.ts`):**
+
 - `text`: `{ fontSize, align, placeholder?, defaultValue?, validation?: 'none'|'email'|'number'|{regex}, maxLength? }`
 - `checkbox`: `{ defaultChecked? }`
 - `radio`: `{ groupId, optionValue }`
@@ -625,6 +645,7 @@ create table rate_limits (               -- simple fixed-window limiter for Edge
 - `full_name` / `email`: `{ fontSize, align }`
 
 ### 8.1 Coordinate contract (critical)
+
 1. The server extracts each page's **visible box** (CropBox intersected with MediaBox, which is what
    pdf.js renders), its origin (`box_x_pt`, `box_y_pt`), and its rotation into `document_pages` at upload.
    `width_pt`/`height_pt` are the displayed dimensions after rotation.
@@ -641,12 +662,12 @@ create table rate_limits (               -- simple fixed-window limiter for Edge
 
 ## 9. Storage
 
-| Bucket | Public | Path | Who can read | Who can write |
-|---|---|---|---|---|
-| `documents` | No | `{owner_id}/{document_id}/original.pdf`, `completed.pdf`, `certificate.pdf`, `signing/{recipient_id}/{field_id}.png` | Via Edge Function-issued signed URLs only (TTL ≤ 5 min) | Owner may upload `original.pdf` while the document is `draft`; everything else is service role |
-| `uploads-tmp` | No | `{user_id}/{uuid}.{ext}` | Owner | Owner (images/scans awaiting conversion; cleaned up after 24 h) |
-| `signatures` | No | `{user_id}/{id}.png` | Owner | Owner |
-| `avatars` | No | `{user_id}/avatar.jpg` | Authenticated users (signed URL) | Owner |
+| Bucket        | Public | Path                                                                                                                 | Who can read                                            | Who can write                                                                                                                            |
+| ------------- | ------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `documents`   | No     | `{owner_id}/{document_id}/original.pdf`, `completed.pdf`, `certificate.pdf`, `signing/{recipient_id}/{field_id}.png` | Via Edge Function-issued signed URLs only (TTL ≤ 5 min) | Owner may upload `original.pdf` while the document is `draft`; everything else is service role                                           |
+| `uploads-tmp` | No     | `{user_id}/{uuid}.{ext}`                                                                                             | Owner                                                   | Owner (images/scans awaiting conversion; `process-upload` deletes them; a 24 h sweep for abandoned files arrives with `cron-tick` in P7) |
+| `signatures`  | No     | `{user_id}/{id}.png`                                                                                                 | Owner                                                   | Owner                                                                                                                                    |
+| `avatars`     | No     | `{user_id}/avatar.jpg`                                                                                               | Authenticated users (signed URL)                        | Owner                                                                                                                                    |
 
 Storage RLS policies use `storage.foldername(name)[1] = auth.uid()::text`. Downloads always go through
 `get-download-url`, which authorizes the request, logs `DOCUMENT_DOWNLOADED`, and returns a short-lived
@@ -662,29 +683,35 @@ signed URL. Store paths, never URLs, in the database.
 All functions: Zod-validated input, a typed error envelope `{ error: { code, message } }`, rate limiting
 where noted, and audit logging through a shared `logEvent()` that captures IP and user agent from headers.
 
-| Function | Caller | Purpose |
-|---|---|---|
-| `process-upload` | owner | Validate PDF (type, size, not encrypted), compute SHA-256, extract `document_pages`, set `page_count`/`file_size_bytes`; or convert images from `uploads-tmp` → PDF. Logs `DOCUMENT_UPLOADED` |
-| `send-document` | owner | Validate draft completeness, set `in_progress`, activate group 1, issue tokens, send emails/push. Logs `DOCUMENT_SENT`, `RECIPIENT_NOTIFIED` |
-| `submit-signing` | auth recipient | Validate turn and required fields; copy signature PNGs; write `field_values`; set recipient `signed`/`approved`; advance group or call finalize. **Single transaction.** |
-| `guest-open` / `guest-submit` / `guest-decline` / `guest-download` / `guest-otp` | guest token | Guest equivalents (§7). Rate-limited per token and IP |
-| `decline` | auth recipient | Decline with reason → document `declined`, notify owner + participants |
-| `void-document` | owner | Void with reason, revoke tokens, notify active recipients |
-| `remind` | owner | Re-notify active, un-acted recipients (rate-limited) |
-| `finalize-document` | internal | Flatten values into a copy of the original (`pdf-lib`), generate the certificate, hash, store, set `completed`, email the final PDF + certificate to all participants including CC |
-| `get-download-url` | auth participant | Authorize, log, and return a signed URL. `purpose: 'view' \| 'download'` logs `DOCUMENT_VIEWED` (de-duplicated: one per user per document per 30 min; never changes recipient status) or `DOCUMENT_DOWNLOADED` |
-| `delete-draft` | owner | Soft-delete a draft, remove its storage objects, log `DOCUMENT_DELETED` |
-| `cron-tick` | `pg_cron` every 15 min | Send due reminders; expire overdue documents; clean up `uploads-tmp` |
-| `register-push-token` | auth | Upsert push token |
-| `delete-account` | auth | §17.3 |
+| Function                                                                         | Caller                 | Purpose                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------------------------------------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `process-upload`                                                                 | owner                  | Validate PDF (type, size, not encrypted), compute SHA-256, extract `document_pages`, set `page_count`/`file_size_bytes`; or convert images from `uploads-tmp` → PDF. Logs `DOCUMENT_UPLOADED`. Errors: not a PDF or encrypted → `FILE_UNSUPPORTED`; unreadable → `PDF_RENDER_FAILED`; over 25 MB or 200 pages → `FILE_TOO_LARGE`; file missing → `UPLOAD_FAILED`. Idempotent |
+| `send-document`                                                                  | owner                  | Validate draft completeness, set `in_progress`, activate group 1, issue tokens, send emails/push. Logs `DOCUMENT_SENT`, `RECIPIENT_NOTIFIED`                                                                                                                                                                                                                                 |
+| `submit-signing`                                                                 | auth recipient         | Validate turn and required fields; copy signature PNGs; write `field_values`; set recipient `signed`/`approved`; advance group or call finalize. **Single transaction.**                                                                                                                                                                                                     |
+| `guest-open` / `guest-submit` / `guest-decline` / `guest-download` / `guest-otp` | guest token            | Guest equivalents (§7). Rate-limited per token and IP                                                                                                                                                                                                                                                                                                                        |
+| `decline`                                                                        | auth recipient         | Decline with reason → document `declined`, notify owner + participants                                                                                                                                                                                                                                                                                                       |
+| `void-document`                                                                  | owner                  | Void with reason, revoke tokens, notify active recipients                                                                                                                                                                                                                                                                                                                    |
+| `remind`                                                                         | owner                  | Re-notify active, un-acted recipients (rate-limited)                                                                                                                                                                                                                                                                                                                         |
+| `finalize-document`                                                              | internal               | Flatten values into a copy of the original (`pdf-lib`), generate the certificate, hash, store, set `completed`, email the final PDF + certificate to all participants including CC                                                                                                                                                                                           |
+| `get-download-url`                                                               | auth participant       | Authorize, log, and return a signed URL. `purpose: 'view' \| 'download'` logs `DOCUMENT_VIEWED` (de-duplicated: one per user per document per 30 min; never changes recipient status) or `DOCUMENT_DOWNLOADED`                                                                                                                                                               |
+| `delete-draft`                                                                   | owner                  | Soft-delete a draft, remove its storage objects, log `DOCUMENT_DELETED`                                                                                                                                                                                                                                                                                                      |
+| `cron-tick`                                                                      | `pg_cron` every 15 min | Send due reminders; expire overdue documents; clean up `uploads-tmp`                                                                                                                                                                                                                                                                                                         |
+| `register-push-token`                                                            | auth                   | Upsert push token                                                                                                                                                                                                                                                                                                                                                            |
+| `delete-account`                                                                 | auth                   | §17.3                                                                                                                                                                                                                                                                                                                                                                        |
 
 Postgres RPCs (security invoker unless noted): `get_dashboard_summary()`, `list_documents(...)`,
-`search_documents(q)`, `list_activity(cursor)`, `link_recipients_to_user()` (security definer, called after
+`search_documents(q)`, `get_document(id)` (works for hidden documents), `get_storage_usage()`,
+`list_document_senders()`, `list_activity(cursor)`, `link_recipients_to_user()` (security definer, called after
 sign-in), `log_event(...)` (security definer, **execute revoked from `anon` and `authenticated`**).
+Display status is computed in one place, `document_display_status(...)`, used by `my_documents()` and
+`get_document()`. Service-role only: `check_rate_limit(...)`, `finalize_original_upload(...)`.
+Signed download URLs carry a `download=<file name>` parameter appended by the function and encoded once
+(the storage client's own option double-encodes characters such as parentheses).
 
 ---
 
 ## 11. Reminders & expiry `[P7]`
+
 - Per document: `reminder_first_after_days` (null = off) and `reminder_repeat_every_days`. Defaults come
   from the profile.
 - `cron-tick` sends a reminder to an active, un-acted recipient when
@@ -698,6 +725,7 @@ sign-in), `log_event(...)` (security definer, **execute revoked from `anon` and 
 ## 12. Audit trail & certificate
 
 ### 12.1 Audit rules
+
 - Every state change and every access to document content creates an event. Events are written **only
   server-side** (Edge Functions, or DB triggers via `log_event`).
 - Captured on every event: type, timestamp (server clock), actor (user id and/or recipient id), actor
@@ -708,6 +736,7 @@ sign-in), `log_event(...)` (security definer, **execute revoked from `anon` and 
   is generated.
 
 ### 12.2 Certificate (PDF, appended as a separate file and SHOULD also be appended as final pages)
+
 Document ID · title · page count · original SHA-256 · completed SHA-256 · sender (name, email) · each
 recipient (name, email, role, order, status, sent/viewed/signed timestamps, IP, user agent,
 authentication method: link / link + OTP / account) · ESIGN consent timestamp and disclosure version per
@@ -717,16 +746,16 @@ signer · completion timestamp · full event history (UTC, with the time zone st
 
 ## 13. Notifications
 
-| Trigger | Owner | Recipient | CC | Channels |
-|---|---|---|---|---|
-| Group activated / signature requested | — | ✅ | — | email (always), push + in-app if linked account |
-| Recipient viewed | ✅ | — | — | in-app, push (pref) |
-| Recipient signed/approved | ✅ | — | — | in-app, push, email (pref) |
-| Declined | ✅ | other active recipients | — | email, push, in-app |
-| Completed | ✅ | ✅ | ✅ | email with final PDF + certificate links, push, in-app |
-| Voided | — | active + completed recipients | — | email, in-app |
-| Reminder | — | ✅ | — | email, push |
-| Expiring in 24 h (SHOULD) / Expired | ✅ (expired) | ✅ (expiring) | — | email, in-app |
+| Trigger                               | Owner        | Recipient                     | CC  | Channels                                               |
+| ------------------------------------- | ------------ | ----------------------------- | --- | ------------------------------------------------------ |
+| Group activated / signature requested | —            | ✅                            | —   | email (always), push + in-app if linked account        |
+| Recipient viewed                      | ✅           | —                             | —   | in-app, push (pref)                                    |
+| Recipient signed/approved             | ✅           | —                             | —   | in-app, push, email (pref)                             |
+| Declined                              | ✅           | other active recipients       | —   | email, push, in-app                                    |
+| Completed                             | ✅           | ✅                            | ✅  | email with final PDF + certificate links, push, in-app |
+| Voided                                | —            | active + completed recipients | —   | email, in-app                                          |
+| Reminder                              | —            | ✅                            | —   | email, push                                            |
+| Expiring in 24 h (SHOULD) / Expired   | ✅ (expired) | ✅ (expiring)                 | —   | email, in-app                                          |
 
 Respect `profiles.notification_prefs`. Signature-request emails to guests can't be disabled, because
 they are the product. Email templates are plain, accessible HTML with a text alternative, carrying the
@@ -739,19 +768,19 @@ SignFlow brand only.
 - HTTPS only. Supabase session stored in secure storage. Short access-token TTL with refresh.
 - **RLS on every table.** Policy summary:
 
-| Table | SELECT | INSERT | UPDATE | DELETE |
-|---|---|---|---|---|
-| profiles | self; co-participants' `id`, `full_name`, `avatar_path` via the `public_profiles` view | trigger | self (not `email`) | via `delete-account` |
-| documents | owner, or linked recipient whose group is active/past (CC: after completion) | owner, `status='draft'` | owner while `draft`, limited columns (title, email fields, options) — never `status`, paths, hashes, `deleted_at` | ❌ (via `delete-draft`) |
-| document_pages | as documents | service role | — | — |
-| document_recipients | owner; linked recipient sees all rows of the document (names/emails/status) | owner while draft | owner while draft | owner while draft |
-| document_fields | owner; linked recipient sees **own fields** + others' fields that have values | owner while draft | owner while draft | owner while draft |
-| field_values | owner; participants after their group is active | service role | — | — |
-| saved_signatures | self | self | self | self |
-| document_events | owner; participants (of that document) | service role / `log_event` | ❌ | ❌ |
-| notifications | self | service role | self (`read_at` only) | self |
-| push_tokens | self | self | self | self |
-| tokens/otps/consents/rate_limits | ❌ (service role only) | ❌ | ❌ | ❌ |
+| Table                            | SELECT                                                                                 | INSERT                     | UPDATE                                                                                                            | DELETE                  |
+| -------------------------------- | -------------------------------------------------------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| profiles                         | self; co-participants' `id`, `full_name`, `avatar_path` via the `public_profiles` view | trigger                    | self (not `email`)                                                                                                | via `delete-account`    |
+| documents                        | owner, or linked recipient whose group is active/past (CC: after completion)           | owner, `status='draft'`    | owner while `draft`, limited columns (title, email fields, options) — never `status`, paths, hashes, `deleted_at` | ❌ (via `delete-draft`) |
+| document_pages                   | as documents                                                                           | service role               | —                                                                                                                 | —                       |
+| document_recipients              | owner; linked recipient sees all rows of the document (names/emails/status)            | owner while draft          | owner while draft                                                                                                 | owner while draft       |
+| document_fields                  | owner; linked recipient sees **own fields** + others' fields that have values          | owner while draft          | owner while draft                                                                                                 | owner while draft       |
+| field_values                     | owner; participants after their group is active                                        | service role               | —                                                                                                                 | —                       |
+| saved_signatures                 | self                                                                                   | self                       | self                                                                                                              | self                    |
+| document_events                  | owner; participants (of that document)                                                 | service role / `log_event` | ❌                                                                                                                | ❌                      |
+| notifications                    | self                                                                                   | service role               | self (`read_at` only)                                                                                             | self                    |
+| push_tokens                      | self                                                                                   | self                       | self                                                                                                              | self                    |
+| tokens/otps/consents/rate_limits | ❌ (service role only)                                                                 | ❌                         | ❌                                                                                                                | ❌                      |
 
 - Implement helper functions `is_document_owner(doc)` and `is_active_participant(doc)` as
   `security definer`, `stable`, with `set search_path = ''`.
@@ -777,19 +806,21 @@ SignFlow brand only.
 Typed error codes are shared between client and server (`/shared/errors.ts`), and each is mapped to
 friendly, actionable copy.
 
-| Code | When | UX |
-|---|---|---|
-| `FILE_UNSUPPORTED` | Not PDF/JPEG/PNG/HEIC, or encrypted PDF | Inline error on the source step |
-| `FILE_TOO_LARGE` | Above the §9 limits | Explain the limit |
-| `UPLOAD_FAILED` | Network/storage error | Retry button; resumable if possible |
-| `PDF_RENDER_FAILED` | Corrupt or unrenderable PDF | Error state with "Try again" / "Contact support" |
-| `NETWORK_OFFLINE` | No connectivity | Global banner; queries show cached data read-only; mutations disabled with explanation |
-| `INVALID_EMAIL` | Recipient form | Field-level error |
-| `LINK_EXPIRED` / `LINK_INVALID` | Guest token | Dedicated guest error page with sender contact |
-| `NOT_YOUR_TURN` | Signing before group activation | Explain who is pending |
-| `FORBIDDEN` | RLS/authorization failure | "You don't have access to this document" |
-| `INVALID_STATE` | Action not allowed in current status | Refresh document, explain |
-| `RATE_LIMITED` | Too many requests | Show the cooldown |
+| Code                            | When                                                                     | UX                                                                                     |
+| ------------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `FILE_UNSUPPORTED`              | Not PDF/JPEG/PNG/HEIC, or encrypted PDF                                  | Inline error on the source step                                                        |
+| `FILE_TOO_LARGE`                | Above the §9 limits                                                      | Explain the limit                                                                      |
+| `UPLOAD_FAILED`                 | Network/storage error                                                    | Retry button; resumable if possible                                                    |
+| `PDF_RENDER_FAILED`             | Corrupt or unrenderable PDF                                              | Error state with "Try again" / "Contact support"                                       |
+| `NETWORK_OFFLINE`               | No connectivity                                                          | Global banner; queries show cached data read-only; mutations disabled with explanation |
+| `INVALID_EMAIL`                 | Recipient form                                                           | Field-level error                                                                      |
+| `LINK_EXPIRED` / `LINK_INVALID` | Guest token                                                              | Dedicated guest error page with sender contact                                         |
+| `NOT_YOUR_TURN`                 | Signing before group activation                                          | Explain who is pending                                                                 |
+| `FORBIDDEN`                     | RLS/authorization failure                                                | "You don't have access to this document"                                               |
+| `INVALID_STATE`                 | Action not allowed in current status                                     | Refresh document, explain                                                              |
+| `RATE_LIMITED`                  | Too many requests                                                        | Show the cooldown                                                                      |
+| `INVALID_INPUT`                 | Request failed validation                                                | Field-level error or generic copy                                                      |
+| `NOT_FOUND`                     | Document missing, deleted, or not accessible (existence is not revealed) | Not-found state                                                                        |
 
 **Offline policy (MVP):** read-only. TanStack Query persisted cache for lists and details. No offline
 signing (it would weaken the audit trail).
@@ -797,6 +828,7 @@ signing (it would weaken the audit trail).
 ---
 
 ## 16. Mobile UX & accessibility requirements
+
 - Safe areas, keyboard avoidance on every form, pull-to-refresh on lists, skeletons for initial loads,
   empty and error states on every data view, haptics on key confirmations (send, sign, delete).
 - Accessibility: every interactive element has `accessibilityLabel`/`Role`. Minimum 44×44 pt touch
@@ -815,6 +847,7 @@ signing (it would weaken the audit trail).
 ## 17. Legal & compliance (product requirements; get legal review before launch)
 
 ### 17.1 ESIGN/UETA consent
+
 Before a signer's first interaction with a document, show the **Consumer Disclosure** (versioned text in
 `/constants/legal`): consent to use electronic records and signatures, the right to receive paper copies,
 how to withdraw consent, and hardware/software requirements. Record it in `esign_consents` and log
@@ -822,17 +855,20 @@ how to withdraw consent, and hardware/software requirements. Record it in `esign
 certificate (§12.2) is the record.
 
 ### 17.2 Retention
+
 Completed documents, certificates, and audit logs are retained for all participants even if the owner
 hides the document. Default retention is indefinite while the owner's account exists (§22 open question
 on policy after account deletion).
 
 ### 17.3 Account deletion (App Store guideline 5.1.1(v), Google Play policy)
+
 In-app "Delete account" with re-authentication. It deletes the profile, saved signatures, push tokens,
 drafts, and uploads, and signs out everywhere. For documents the user sent or signed that involve other
 parties, the user's PII on those records is retained as legally required for the other participants and
 documented in the privacy policy.
 
 ### 17.4 Store requirements
+
 Sign in with Apple is offered wherever Google sign-in is offered on iOS. Privacy policy and terms are
 linked in-app and in the stores. Privacy nutrition labels / data safety forms are prepared in P8.
 
@@ -882,6 +918,7 @@ are committed and regenerated whenever a migration changes.
 ## 19. Testing & quality gates
 
 Every phase must pass, **before** it is reported done:
+
 - `tsc --noEmit`, ESLint, and Prettier are clean.
 - Unit tests (Jest + RNTL) for new components, hooks, and Zod schemas.
 - **pgTAP tests for every RLS policy introduced**, including negative cases (user B cannot read/update
@@ -898,24 +935,26 @@ Every phase must pass, **before** it is reported done:
 Each phase ends with a **phase report**: what was built, files created, migrations, test results, and
 an explicit list of TODOs/stubs and known issues. **Stop for review after each phase.**
 
-| Phase | Scope | Done when… |
-|---|---|---|
-| **P1 Foundation** | Project setup, theme/tokens, core components, i18n scaffolding, Expo Router structure, onboarding, all auth screens + Apple/Google, profiles + core schema (documents, recipients, events), RLS + pgTAP, dashboard summary RPC, Home with real queries + seed data, Account basics | See `prompts/phase-1.md` |
-| **P2 Upload & library** | Upload sources (Files, scan, images→PDF), `process-upload`, storage buckets/policies, Documents tab (filters, search, sort, pagination), details (basic), rename, delete draft, download, avatar | A user uploads a 3-page PDF and a scanned document, sees both in the library with correct page count/size, finds them by search, and cannot access another user's file by path |
-| **P3 Viewer & signatures** | **Spike first:** pdf.js WebView renderer + coordinate round trip (place a box in the app → flatten server-side → position correct ±1 pt on the fixture set). Then the viewer (zoom, page jump) and signature creation (draw/type/upload), saved signatures | Spike report + golden tests pass; the user creates, saves, and reuses a signature |
-| **P4 Field editor** | Editor with MUST field types, drag/resize, recipient assignment (placeholder recipients allowed in drafts), properties, autosave | Fields placed on portrait + landscape + rotated pages persist and reload in the exact same positions |
-| **P5 Recipients & send** | Recipient step, ordering, review & send, `send-document`, tokens, email via Resend, recipient linking | Sending to 2 sequential signers emails only the first; the draft is locked after sending |
-| **P6 Signing & completion** | In-app signing, guest web signing (web export + universal links), ESIGN consent, decline, `submit-signing`, `finalize-document`, certificate | Owner + 1 guest + 1 CC complete a document; everyone receives the flattened PDF + certificate; the hashes on the certificate match the files |
-| **P7 Activity, notifications, reminders** | Activity tab, document timeline, in-app inbox, push, reminders, expiry, void, remind, notification prefs | Reminders and expiry fire from cron in local dev (time-travel test); push arrives on a device build |
-| **P8 Hardening & release** | Rate limits review, security review, biometric unlock, 2FA, account deletion, Sentry, accessibility audit, performance (200-page PDF), store assets, privacy labels | Security checklist signed off; E2E suite green on iOS + Android builds |
+| Phase                                     | Scope                                                                                                                                                                                                                                                                              | Done when…                                                                                                                                                                     |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **P1 Foundation**                         | Project setup, theme/tokens, core components, i18n scaffolding, Expo Router structure, onboarding, all auth screens + Apple/Google, profiles + core schema (documents, recipients, events), RLS + pgTAP, dashboard summary RPC, Home with real queries + seed data, Account basics | See `prompts/phase-1.md`                                                                                                                                                       |
+| **P2 Upload & library**                   | Upload sources (Files, scan, images→PDF), `process-upload`, storage buckets/policies, Documents tab (filters, search, sort, pagination), details (basic), rename, delete draft, download, avatar                                                                                   | A user uploads a 3-page PDF and a scanned document, sees both in the library with correct page count/size, finds them by search, and cannot access another user's file by path |
+| **P3 Viewer & signatures**                | **Spike first:** pdf.js WebView renderer + coordinate round trip (place a box in the app → flatten server-side → position correct ±1 pt on the fixture set). Then the viewer (zoom, page jump) and signature creation (draw/type/upload), saved signatures                         | Spike report + golden tests pass; the user creates, saves, and reuses a signature                                                                                              |
+| **P4 Field editor**                       | Editor with MUST field types, drag/resize, recipient assignment (placeholder recipients allowed in drafts), properties, autosave                                                                                                                                                   | Fields placed on portrait + landscape + rotated pages persist and reload in the exact same positions                                                                           |
+| **P5 Recipients & send**                  | Recipient step, ordering, review & send, `send-document`, tokens, email via Resend, recipient linking                                                                                                                                                                              | Sending to 2 sequential signers emails only the first; the draft is locked after sending                                                                                       |
+| **P6 Signing & completion**               | In-app signing, guest web signing (web export + universal links), ESIGN consent, decline, `submit-signing`, `finalize-document`, certificate                                                                                                                                       | Owner + 1 guest + 1 CC complete a document; everyone receives the flattened PDF + certificate; the hashes on the certificate match the files                                   |
+| **P7 Activity, notifications, reminders** | Activity tab, document timeline, in-app inbox, push, reminders, expiry, void, remind, notification prefs                                                                                                                                                                           | Reminders and expiry fire from cron in local dev (time-travel test); push arrives on a device build                                                                            |
+| **P8 Hardening & release**                | Rate limits review, security review, biometric unlock, 2FA, account deletion, Sentry, accessibility audit, performance (200-page PDF), store assets, privacy labels                                                                                                                | Security checklist signed off; E2E suite green on iOS + Android builds                                                                                                         |
 
 ---
 
 ## 21. Future-ready architecture (LATER, do not build)
+
 Teams/organizations, templates, bulk send, public API, webhooks, CRM integrations, cloud drives
 (Google Drive, Dropbox, OneDrive, Box), custom branding, subscription plans, and enterprise SSO.
 
 To keep these cheap later:
+
 - Authorization goes through the helper functions (§14), so adding `org_id` later changes the helpers,
   not every policy.
 - Side effects (email/push/webhooks) go through one `notify(event)` dispatcher in `_shared/`.
@@ -925,6 +964,7 @@ To keep these cheap later:
 ---
 
 ## 22. Open questions (owner to answer)
+
 1. Production domain for the signing links and universal links (`sign.<domain>`)?
 2. Email sender domain and provider account (Resend assumed)?
 3. Supabase project region (data residency, e.g. EU vs US)?

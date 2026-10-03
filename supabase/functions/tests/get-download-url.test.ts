@@ -46,6 +46,18 @@ Deno.test('owner gets a short-lived signed URL that serves the exact file', asyn
   assertEquals(downloaded[0]!.ip, TEST_IP);
 });
 
+Deno.test('the download file name survives special characters exactly', async () => {
+  const special = await createDraft(owner, 'Lease (unit 4) – final & signed');
+  await uploadOriginal(owner, special, bytes);
+  await processUpload({ document_id: special }, owner.ctx);
+  const { url } = await getDownloadUrl({ document_id: special, kind: 'original' }, owner.ctx);
+  const res = await fetch(onPublicHost(url));
+  await res.body?.cancel();
+  const disposition = res.headers.get('content-disposition') ?? '';
+  const encoded = /filename\*=UTF-8''([^;]+)/.exec(disposition)?.[1] ?? '';
+  assertEquals(decodeURIComponent(encoded), 'Lease (unit 4) – final & signed.pdf');
+});
+
 Deno.test('a signed URL with a tampered token is refused', async () => {
   const { url } = await getDownloadUrl({ document_id: id, kind: 'original' }, owner.ctx);
   const tampered = onPublicHost(url).replace(

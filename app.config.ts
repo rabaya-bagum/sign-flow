@@ -39,6 +39,19 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-web-browser',
     'expo-font',
     [
+      'expo-image-picker',
+      {
+        photosPermission: 'SignFlow uses your photos to turn them into PDFs and to set your profile photo.',
+        // Same string as the scanner: `false` here would strip the scanner's camera permission.
+        cameraPermission: 'SignFlow uses the camera to scan paper documents.',
+        microphonePermission: false,
+      },
+    ],
+    [
+      'react-native-document-scanner-plugin',
+      { cameraPermission: 'SignFlow uses the camera to scan paper documents.' },
+    ],
+    [
       'expo-splash-screen',
       {
         image: './assets/splash-icon.png',

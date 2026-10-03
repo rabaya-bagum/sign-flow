@@ -97,12 +97,10 @@ export async function createDraft(user: TestUser, title = 'Test draft'): Promise
 }
 
 export async function uploadOriginal(user: TestUser, documentId: string, bytes: Uint8Array) {
-  return user.client.storage
-    .from('documents')
-    .upload(`${user.id}/${documentId}/original.pdf`, bytes, {
-      contentType: 'application/pdf',
-      upsert: false,
-    });
+  return user.client.storage.from('documents').upload(`${user.id}/${documentId}/original.pdf`, bytes, {
+    contentType: 'application/pdf',
+    upsert: false,
+  });
 }
 
 export async function storageHas(bucket: string, path: string): Promise<boolean> {

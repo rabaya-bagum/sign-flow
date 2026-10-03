@@ -19,10 +19,17 @@ describe('email sign-up with verification (criterion 4, server side)', () => {
   // A pending signature request addressed to this email before the account exists.
   let documentId: string;
   beforeAll(async () => {
+    // A throwaway sender, so the seed users' dashboards are never affected by this test.
+    const sender = await admin.auth.admin.createUser({
+      email: `sender.${unique}@signflow.test`,
+      password: 'sender-test-pass1',
+      email_confirm: true,
+    });
+    if (sender.error) throw sender.error;
     const { data: doc, error } = await admin
       .from('documents')
       .insert({
-        owner_id: '11111111-1111-4111-8111-111111111111',
+        owner_id: sender.data.user.id,
         title: `IT ${unique}.pdf`,
         status: 'in_progress',
         current_signing_order: 1,
@@ -97,13 +104,8 @@ describe('email sign-up with verification (criterion 4, server side)', () => {
     expect(error?.code).toBe('42501');
   });
 
-  afterAll(async () => {
-    // document_events is append-only, but none were written for this document.
-    await admin.from('documents').delete().eq('id', documentId);
-    const { data } = await admin.auth.admin.listUsers();
-    const user = data.users.find((u) => u.email === email);
-    if (user) await admin.auth.admin.deleteUser(user.id);
-  });
+  // No cleanup: documents carry append-only audit events (DOCUMENT_CREATED), so they are not
+  // deletable. Every run uses unique users; `npm run db:reset` clears local data.
 });
 
 describe('password recovery', () => {

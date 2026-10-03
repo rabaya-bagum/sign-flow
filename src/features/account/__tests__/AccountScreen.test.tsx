@@ -15,6 +15,9 @@ jest.mock('../api', () => ({
 }));
 jest.mock('@/features/auth/api', () => ({ signOut: jest.fn() }));
 jest.mock('@/lib/openLink', () => ({ openLink: jest.fn() }));
+jest.mock('@/features/documents/api', () => ({
+  getStorageUsage: jest.fn(async () => ({ bytes: 4436650, documentCount: 6 })),
+}));
 
 const profile: accountApi.Profile = {
   id: 'u1',
@@ -44,6 +47,8 @@ describe('AccountScreen', () => {
     expect(screen.getByText('owner@signflow.test')).toBeOnTheScreen();
     expect(screen.getAllByText('Coming in Phase 8').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Theme, System' })).toBeOnTheScreen();
+    expect(await screen.findByLabelText('Used storage, 4.2 MB · 6 documents')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Add photo' })).toBeOnTheScreen();
   });
 
   it('asks for confirmation before logging out', async () => {

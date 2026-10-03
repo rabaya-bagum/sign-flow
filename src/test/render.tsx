@@ -12,7 +12,11 @@ const safeAreaMetrics = {
 
 export function createTestQueryClient() {
   return new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
+    defaultOptions: {
+      queries: { retry: false, gcTime: Infinity },
+      // No GC timers: a pending 5-minute mutation GC timeout would keep Jest from exiting.
+      mutations: { retry: false, gcTime: Infinity },
+    },
   });
 }
 

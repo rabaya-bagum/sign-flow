@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 
 import {
   AppButton,
   AppText,
+  ActionSheet,
   Avatar,
   Card,
   ConfirmationModal,
@@ -18,9 +19,12 @@ import { LEGAL_URLS } from '@/constants/legal';
 import { signOut } from '@/features/auth/api';
 import { useAppErrorMessage } from '@/hooks/useAppErrorMessage';
 import { openLink } from '@/lib/openLink';
+import { useStorageUsage } from '@/features/documents/hooks';
+import { formatBytes } from '@/utils/formatBytes';
+import * as ImagePicker from 'expo-image-picker';
 import { usePreferencesStore } from '@/store/preferences';
 
-import { useProfile } from './hooks';
+import { useAvatarMutations, useAvatarUrl, useProfile } from './hooks';
 import { themeLabelKey } from './themeLabels';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -46,6 +50,21 @@ export function AccountScreen() {
   const profile = useProfile();
   const theme = usePreferencesStore((s) => s.theme);
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [photoMenu, setPhotoMenu] = useState(false);
+  const avatarUrl = useAvatarUrl(profile.data);
+  const avatar = useAvatarMutations();
+  const storage = useStorageUsage();
+
+  const choosePhoto = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+    const uri = result.canceled ? null : result.assets[0]?.uri;
+    if (uri) avatar.upload.mutate(uri, { onError: (e) => Alert.alert(t('errors.title'), errorMessage(e)) });
+  };
   const [loggingOut, setLoggingOut] = useState(false);
   const comingIn = (phase: number) => t('common.comingInPhase', { phase });
 
@@ -81,14 +100,29 @@ export function AccountScreen() {
           />
         ) : (
           <ListRow
-            left={<Avatar name={profile.data.full_name} size={56} />}
+            left={<Avatar name={profile.data.full_name} uri={avatarUrl.data} size={56} />}
             title={profile.data.full_name}
             subtitle={[profile.data.email, profile.data.phone].filter(Boolean).join(' · ')}
             onPress={() => router.push('/account/profile')}
             accessibilityHint={t('account.editProfile')}
+            separator
             testID="account-profile"
           />
         )}
+        {profile.data ? (
+          <ListRow
+            title={profile.data.avatar_path ? t('account.changePhoto') : t('account.addPhoto')}
+            icon="camera-outline"
+            iconColor="primary"
+            onPress={() => (profile.data.avatar_path ? setPhotoMenu(true) : void choosePhoto())}
+            right={
+              avatar.upload.isPending || avatar.remove.isPending ? (
+                <SkeletonBlock width={20} height={20} radius={10} />
+              ) : undefined
+            }
+            testID="account-photo"
+          />
+        ) : null}
       </Section>
 
       <Section title={t('account.signature')}>
@@ -120,7 +154,18 @@ export function AccountScreen() {
       </Section>
 
       <Section title={t('account.storage')}>
-        <ListRow title={t('account.usedStorage')} subtitle={comingIn(2)} disabled />
+        <ListRow
+          title={t('account.usedStorage')}
+          value={
+            storage.data
+              ? t('account.storageSummary', {
+                  size: formatBytes(storage.data.bytes),
+                  count: storage.data.documentCount,
+                })
+              : undefined
+          }
+          testID="account-storage"
+        />
       </Section>
 
       <Section title={t('account.legal')}>
@@ -162,6 +207,30 @@ export function AccountScreen() {
         testID="account-logout"
       />
 
+      <ActionSheet
+        visible={photoMenu}
+        title={t('account.photoTitle')}
+        onClose={() => setPhotoMenu(false)}
+        closeLabel={t('common.close')}
+        actions={[
+          {
+            key: 'change',
+            label: t('account.changePhoto'),
+            icon: 'images-outline',
+            onPress: () => void choosePhoto(),
+          },
+          {
+            key: 'remove',
+            label: t('account.removePhoto'),
+            icon: 'trash-outline',
+            destructive: true,
+            onPress: () =>
+              avatar.remove.mutate(undefined, {
+                onError: (e) => Alert.alert(t('errors.title'), errorMessage(e)),
+              }),
+          },
+        ]}
+      />
       <ConfirmationModal
         visible={confirmLogout}
         title={t('account.logoutConfirmTitle')}

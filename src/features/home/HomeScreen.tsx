@@ -38,9 +38,8 @@ export function HomeScreen() {
 
   const openBucket = (bucket: DashboardBucket) =>
     router.navigate({ pathname: '/documents', params: { bucket } });
-  const openDetails = (id: string, title: string) =>
-    router.push({ pathname: '/documents/[id]', params: { id, title } });
-  const openUpload = () => router.push('/documents/new');
+  const openDetails = (id: string) => router.push({ pathname: '/documents/[id]', params: { id } });
+  const openUpload = () => router.push('/documents/new/source');
 
   const failed = summary.isError && recent.isError;
 
@@ -105,8 +104,8 @@ export function HomeScreen() {
                   key={doc.id}
                   document={doc}
                   separator={i < recent.data.length - 1}
-                  onOpen={() => openDetails(doc.id, doc.title)}
-                  onInfo={() => openDetails(doc.id, doc.title)}
+                  onOpen={() => openDetails(doc.id)}
+                  onInfo={() => openDetails(doc.id)}
                 />
               ))
             )}

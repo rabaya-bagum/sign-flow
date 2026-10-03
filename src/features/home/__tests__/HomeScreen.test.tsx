@@ -69,7 +69,7 @@ describe('HomeScreen', () => {
     await fireEvent.press(await screen.findByRole('button', { name: 'Details for Mutual NDA.pdf' }));
     expect(mockRouter.push).toHaveBeenCalledWith({
       pathname: '/documents/[id]',
-      params: { id: 'd1', title: 'Mutual NDA.pdf' },
+      params: { id: 'd1' },
     });
   });
 
@@ -107,7 +107,7 @@ describe('HomeScreen', () => {
     expect(mockRouter.push.mock.calls.map((c) => c[0])).toEqual([
       '/search',
       '/notifications',
-      '/documents/new',
+      '/documents/new/source',
     ]);
   });
 

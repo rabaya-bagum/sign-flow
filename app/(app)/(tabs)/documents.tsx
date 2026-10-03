@@ -1,3 +1,3 @@
-import { DocumentsPlaceholderScreen } from '@/features/placeholders/DocumentsPlaceholderScreen';
+import { DocumentsScreen } from '@/features/documents/DocumentsScreen';
 
-export default DocumentsPlaceholderScreen;
+export default DocumentsScreen;

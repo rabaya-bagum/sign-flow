@@ -16,3 +16,8 @@ export { Screen } from './Screen';
 export { SectionHeader } from './SectionHeader';
 export { StatusBadge } from './StatusBadge';
 export { TextLink } from './TextLink';
+export { ActionSheet, type SheetAction } from './ActionSheet';
+export { BottomSheet } from './BottomSheet';
+export { ChipGroup } from './ChipGroup';
+export { ProgressBar } from './ProgressBar';
+export { SearchField } from './SearchField';

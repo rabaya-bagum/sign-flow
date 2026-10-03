@@ -452,6 +452,14 @@ export type Database = {
         Args: { p_key: string; p_max: number; p_window_seconds: number };
         Returns: boolean;
       };
+      document_display_status: {
+        Args: {
+          p_current_signing_order: number;
+          p_document_id: string;
+          p_status: Database['public']['Enums']['document_status'];
+        };
+        Returns: string;
+      };
       finalize_original_upload: {
         Args: {
           p_document_id: string;
@@ -469,6 +477,28 @@ export type Database = {
           drafts: number;
           needs_signature: number;
           waiting: number;
+        }[];
+      };
+      get_document: {
+        Args: { p_document_id: string };
+        Returns: {
+          completed_at: string;
+          created_at: string;
+          display_status: string;
+          file_size_bytes: number;
+          hidden: boolean;
+          id: string;
+          is_owner: boolean;
+          owner_id: string;
+          owner_name: string;
+          page_count: number;
+          sent_at: string;
+          status: Database['public']['Enums']['document_status'];
+          title: string;
+          updated_at: string;
+          upload_incomplete: boolean;
+          void_reason: string;
+          voided_at: string;
         }[];
       };
       get_storage_usage: {

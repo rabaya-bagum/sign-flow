@@ -1,12 +1,3 @@
-import { PlaceholderScreen } from '@/features/placeholders/PlaceholderScreen';
+import { SearchScreen } from '@/features/search/SearchScreen';
 
-export default function SearchRoute() {
-  return (
-    <PlaceholderScreen
-      icon="search-outline"
-      titleKey="placeholders.searchTitle"
-      bodyKey="placeholders.searchBody"
-      phase={2}
-    />
-  );
-}
+export default SearchScreen;

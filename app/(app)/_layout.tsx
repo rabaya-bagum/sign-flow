@@ -21,16 +21,13 @@ export default function AppLayout() {
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="search" options={{ presentation: 'modal', title: t('placeholders.searchTitle') }} />
+      <Stack.Screen name="search" options={{ presentation: 'modal', title: t('search.title') }} />
       <Stack.Screen
         name="notifications"
         options={{ presentation: 'modal', title: t('placeholders.notificationsTitle') }}
       />
-      <Stack.Screen
-        name="documents/new"
-        options={{ presentation: 'modal', title: t('placeholders.uploadTitle') }}
-      />
-      <Stack.Screen name="documents/[id]/index" options={{ title: t('placeholders.detailsTitle') }} />
+      <Stack.Screen name="documents/new" options={{ presentation: 'modal', headerShown: false }} />
+      <Stack.Screen name="documents/[id]/index" options={{ title: t('details.title') }} />
     </Stack>
   );
 }

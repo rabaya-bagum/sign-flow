@@ -1,0 +1,106 @@
+-- Local development seed data. NEVER run against a hosted project.
+-- Users (password for both: SignFlow-dev-123):
+--   owner@signflow.test      John Doe        (sender of most documents)
+--   recipient@signflow.test  Aaliyah Fatimah (recipient)
+--
+-- Expected dashboard counts (needs signature / waiting / drafts / completed):
+--   John Doe:        1 / 2 / 1 / 1   (+1 voided)
+--   Aaliyah Fatimah: 1 / 0 / 1 / 1   (+1 voided; cannot see "Vendor Agreement.pdf", where she is CC)
+-- Files are not uploaded until Phase 2, so storage paths stay null.
+
+do $$
+declare
+  v_owner uuid := '11111111-1111-4111-8111-111111111111';
+  v_recipient uuid := '22222222-2222-4222-8222-222222222222';
+  v_password text := extensions.crypt('SignFlow-dev-123', extensions.gen_salt('bf'));
+begin
+  insert into auth.users (
+    instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+    confirmation_token, email_change, email_change_token_new, recovery_token
+  )
+  values
+    ('00000000-0000-0000-0000-000000000000', v_owner, 'authenticated', 'authenticated',
+     'owner@signflow.test', v_password, now(),
+     '{"provider":"email","providers":["email"]}', '{"full_name":"John Doe"}', now(), now(), '', '', '', ''),
+    ('00000000-0000-0000-0000-000000000000', v_recipient, 'authenticated', 'authenticated',
+     'recipient@signflow.test', v_password, now(),
+     '{"provider":"email","providers":["email"]}', '{"full_name":"Aaliyah Fatimah"}', now(), now(), '', '', '', '');
+
+  insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+  values
+    (gen_random_uuid(), v_owner, v_owner::text,
+     jsonb_build_object('sub', v_owner::text, 'email', 'owner@signflow.test', 'email_verified', true),
+     'email', now(), now(), now()),
+    (gen_random_uuid(), v_recipient, v_recipient::text,
+     jsonb_build_object('sub', v_recipient::text, 'email', 'recipient@signflow.test', 'email_verified', true),
+     'email', now(), now(), now());
+end;
+$$;
+
+insert into public.documents
+  (id, owner_id, title, status, current_signing_order, sent_at, completed_at, voided_at, void_reason,
+   page_count, file_size_bytes, created_at, updated_at)
+values
+  -- John must sign first (order 1), Aaliyah signs after (order 2, still pending).
+  ('a0000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'Mutual NDA.pdf',
+   'in_progress', 1, now() - interval '1 day', null, null, null, 3, 245760,
+   now() - interval '2 days', now() - interval '1 hour'),
+  -- Aaliyah's turn; John waits.
+  ('a0000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'Employment Agreement.pdf',
+   'in_progress', 1, now() - interval '3 days', null, null, null, 8, 1153434,
+   now() - interval '4 days', now() - interval '3 hours'),
+  ('a0000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'Consulting Contract.pdf',
+   'draft', null, null, null, null, null, 5, 512000,
+   now() - interval '1 day', now() - interval '5 hours'),
+  ('a0000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 'Rental Agreement.pdf',
+   'completed', 1, now() - interval '10 days', now() - interval '8 days', null, null, 12, 2097152,
+   now() - interval '11 days', now() - interval '8 days'),
+  ('a0000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111', 'Insurance Form.pdf',
+   'voided', 1, now() - interval '6 days', null, now() - interval '5 days', 'Wrong policy number', 2, 98304,
+   now() - interval '7 days', now() - interval '5 days'),
+  -- External signer's turn; Aaliyah is CC and must not see it yet.
+  ('a0000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111', 'Vendor Agreement.pdf',
+   'in_progress', 1, now() - interval '2 days', null, null, null, 4, 330000,
+   now() - interval '2 days', now() - interval '2 days'),
+  ('a0000000-0000-4000-8000-000000000007', '22222222-2222-4222-8222-222222222222', 'Lease Renewal.pdf',
+   'draft', null, null, null, null, null, 2, 150000,
+   now() - interval '6 hours', now() - interval '6 hours');
+
+insert into public.document_recipients
+  (document_id, user_id, name, email, role, signing_order, status, sent_at, viewed_at, completed_at)
+values
+  ('a0000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'John Doe',
+   'owner@signflow.test', 'signer', 1, 'sent', now() - interval '1 day', null, null),
+  ('a0000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222', 'Aaliyah Fatimah',
+   'recipient@signflow.test', 'signer', 2, 'pending', null, null, null),
+
+  ('a0000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222', 'Aaliyah Fatimah',
+   'recipient@signflow.test', 'signer', 1, 'viewed', now() - interval '3 days', now() - interval '2 days', null),
+  ('a0000000-0000-4000-8000-000000000002', null, 'HR Records',
+   'hr@example.com', 'cc', 1, 'pending', null, null, null),
+
+  ('a0000000-0000-4000-8000-000000000004', '22222222-2222-4222-8222-222222222222', 'Aaliyah Fatimah',
+   'recipient@signflow.test', 'signer', 1, 'signed', now() - interval '10 days', now() - interval '9 days', now() - interval '8 days'),
+  ('a0000000-0000-4000-8000-000000000004', null, 'Property Manager',
+   'manager@example.com', 'cc', 1, 'sent', now() - interval '8 days', null, null),
+
+  ('a0000000-0000-4000-8000-000000000005', '22222222-2222-4222-8222-222222222222', 'Aaliyah Fatimah',
+   'recipient@signflow.test', 'signer', 1, 'viewed', now() - interval '6 days', now() - interval '6 days', null),
+
+  ('a0000000-0000-4000-8000-000000000006', null, 'Sam Partner',
+   'partner@example.com', 'signer', 1, 'sent', now() - interval '2 days', null, null),
+  ('a0000000-0000-4000-8000-000000000006', '22222222-2222-4222-8222-222222222222', 'Aaliyah Fatimah',
+   'recipient@signflow.test', 'cc', 1, 'pending', null, null, null);
+
+-- A few audit events so timelines are not empty (written as postgres; clients can never insert).
+insert into public.document_events (document_id, type, actor_user_id, actor_name, actor_email, description, created_at)
+values
+  ('a0000000-0000-4000-8000-000000000004', 'DOCUMENT_CREATED', '11111111-1111-4111-8111-111111111111',
+   'John Doe', 'owner@signflow.test', 'Document created', now() - interval '11 days'),
+  ('a0000000-0000-4000-8000-000000000004', 'DOCUMENT_SENT', '11111111-1111-4111-8111-111111111111',
+   'John Doe', 'owner@signflow.test', 'Signature request sent', now() - interval '10 days'),
+  ('a0000000-0000-4000-8000-000000000004', 'DOCUMENT_SIGNED', '22222222-2222-4222-8222-222222222222',
+   'Aaliyah Fatimah', 'recipient@signflow.test', 'Aaliyah Fatimah signed', now() - interval '8 days'),
+  ('a0000000-0000-4000-8000-000000000004', 'DOCUMENT_COMPLETED', null,
+   null, null, 'Document completed', now() - interval '8 days');

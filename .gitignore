@@ -1,0 +1,38 @@
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native (Continuous Native Generation)
+/ios
+/android
+
+# Metro / misc
+.metro-health-check*
+*.log
+.DS_Store
+*.pem
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# env files (only .env.example is committed)
+.env
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# Supabase local state
+supabase/.branches
+supabase/.temp
+supabase/.env
+
+# test output
+coverage/

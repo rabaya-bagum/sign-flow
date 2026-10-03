@@ -69,7 +69,7 @@ schema_paths = []
 enabled = true
 # Specifies an ordered list of seed files to load during db reset.
 # Supports glob patterns relative to supabase directory: "./seeds/*.sql"
-sql_paths = ["./seed.sql"]
+sql_paths = ["./seed.sql", "./seed/seed_documents.sql"]
 
 [db.network_restrictions]
 # Enable management of network restrictions.
@@ -118,7 +118,14 @@ enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
-# Uncomment to configure local storage buckets
+# Local seeding only: uploads the seed documents' originals. The bucket itself (and its limits)
+# is created by migration 20261003000900_storage.sql so hosted projects get it too.
+[storage.buckets.documents]
+public = false
+file_size_limit = "25MiB"
+allowed_mime_types = ["application/pdf"]
+objects_path = "./seed/storage/documents"
+
 # [storage.buckets.images]
 # public = false
 # file_size_limit = "50MiB"

@@ -103,6 +103,44 @@ export type Database = {
           },
         ];
       };
+      document_pages: {
+        Row: {
+          box_x_pt: number;
+          box_y_pt: number;
+          document_id: string;
+          height_pt: number;
+          page_number: number;
+          rotation: number;
+          width_pt: number;
+        };
+        Insert: {
+          box_x_pt?: number;
+          box_y_pt?: number;
+          document_id: string;
+          height_pt: number;
+          page_number: number;
+          rotation?: number;
+          width_pt: number;
+        };
+        Update: {
+          box_x_pt?: number;
+          box_y_pt?: number;
+          document_id?: string;
+          height_pt?: number;
+          page_number?: number;
+          rotation?: number;
+          width_pt?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'document_pages_document_id_fkey';
+            columns: ['document_id'];
+            isOneToOne: false;
+            referencedRelation: 'documents';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       document_recipients: {
         Row: {
           completed_at: string | null;
@@ -369,6 +407,24 @@ export type Database = {
         };
         Relationships: [];
       };
+      rate_limits: {
+        Row: {
+          count: number;
+          key: string;
+          window_start: string;
+        };
+        Insert: {
+          count: number;
+          key: string;
+          window_start: string;
+        };
+        Update: {
+          count?: number;
+          key?: string;
+          window_start?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       public_profiles: {
@@ -391,6 +447,21 @@ export type Database = {
       };
     };
     Functions: {
+      can_upload_original: { Args: { p_document_id: string }; Returns: boolean };
+      check_rate_limit: {
+        Args: { p_key: string; p_max: number; p_window_seconds: number };
+        Returns: boolean;
+      };
+      finalize_original_upload: {
+        Args: {
+          p_document_id: string;
+          p_pages: Json;
+          p_path: string;
+          p_sha256: string;
+          p_size_bytes: number;
+        };
+        Returns: boolean;
+      };
       get_dashboard_summary: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -400,10 +471,54 @@ export type Database = {
           waiting: number;
         }[];
       };
+      get_storage_usage: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          bytes: number;
+          document_count: number;
+        }[];
+      };
       is_active_participant: { Args: { p_document_id: string }; Returns: boolean };
       is_document_owner: { Args: { p_document_id: string }; Returns: boolean };
       is_draft_owner: { Args: { p_document_id: string }; Returns: boolean };
+      like_pattern: { Args: { p_text: string }; Returns: string };
       link_recipients_to_user: { Args: Record<PropertyKey, never>; Returns: number };
+      list_document_senders: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          full_name: string;
+          id: string;
+        }[];
+      };
+      list_documents: {
+        Args: {
+          p_bucket?: string;
+          p_cursor_id?: string;
+          p_cursor_value?: string;
+          p_filters?: Json;
+          p_limit?: number;
+          p_search?: string;
+          p_sort?: string;
+        };
+        Returns: {
+          created_at: string;
+          cursor_value: string;
+          display_status: string;
+          file_size_bytes: number;
+          id: string;
+          owner_id: string;
+          owner_name: string;
+          page_count: number;
+          participant_count: number;
+          participants: Json;
+          signers_completed: number;
+          signers_total: number;
+          status: Database['public']['Enums']['document_status'];
+          title: string;
+          updated_at: string;
+          upload_incomplete: boolean;
+        }[];
+      };
       list_recent_documents: {
         Args: { p_limit?: number };
         Returns: {
@@ -438,6 +553,19 @@ export type Database = {
           last_activity_at: string;
           owner_id: string;
           status: Database['public']['Enums']['document_status'];
+          title: string;
+          updated_at: string;
+        }[];
+      };
+      request_header: { Args: { p_name: string }; Returns: string };
+      request_ip: { Args: Record<PropertyKey, never>; Returns: unknown };
+      search_documents: {
+        Args: { p_query: string };
+        Returns: {
+          display_status: string;
+          id: string;
+          matched_recipient_email: string;
+          matched_recipient_name: string;
           title: string;
           updated_at: string;
         }[];

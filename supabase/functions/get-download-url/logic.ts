@@ -1,0 +1,55 @@
+import { SIGNED_URL_TTL_SECONDS } from '../../../shared/limits.ts';
+import type { RequestContext } from '../_shared/context.ts';
+import { z } from '../_shared/deps.ts';
+import { loadVisibleDocument } from '../_shared/documents.ts';
+import { logEvent } from '../_shared/events.ts';
+import { HttpError } from '../_shared/http.ts';
+import { enforceRateLimit } from '../_shared/rateLimit.ts';
+
+export const GetDownloadUrlInput = z.object({
+  document_id: z.uuid(),
+  kind: z.enum(['original', 'completed', 'certificate']).default('original'),
+});
+
+export interface GetDownloadUrlResult {
+  url: string;
+  expires_in: number;
+  file_name: string;
+}
+
+/** Safe, readable file name: the title without path/control characters, ending in .pdf. */
+export function downloadFileName(title: string): string {
+  const base =
+    title
+      .replace(/[\u0000-\u001f\u007f/\\:*?"<>|]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 120) || 'document';
+  return /\.pdf$/i.test(base) ? base : `${base}.pdf`;
+}
+
+/**
+ * Authorizes the caller (owner or active participant, via RLS), logs DOCUMENT_DOWNLOADED and returns
+ * a short-lived signed URL (SPEC §9, §10). Completed copies and certificates arrive in Phase 6.
+ */
+export async function getDownloadUrl(
+  input: z.output<typeof GetDownloadUrlInput>,
+  ctx: RequestContext,
+): Promise<GetDownloadUrlResult> {
+  const doc = await loadVisibleDocument(ctx, input.document_id);
+  if (input.kind !== 'original') {
+    throw new HttpError('INVALID_STATE', 409, 'Completed copies are available after all parties sign');
+  }
+  if (!doc.original_path) throw new HttpError('INVALID_STATE', 409, 'This document has no file yet');
+
+  await enforceRateLimit(ctx.admin, `download:${ctx.userId}`, 60, 60);
+
+  const fileName = downloadFileName(doc.title);
+  const { data, error } = await ctx.admin.storage
+    .from('documents')
+    .createSignedUrl(doc.original_path, SIGNED_URL_TTL_SECONDS, { download: fileName });
+  if (error || !data) throw error ?? new Error('Could not sign URL');
+
+  await logEvent(ctx, doc.id, 'DOCUMENT_DOWNLOADED', 'Document downloaded', { kind: input.kind });
+  return { url: data.signedUrl, expires_in: SIGNED_URL_TTL_SECONDS, file_name: fileName };
+}

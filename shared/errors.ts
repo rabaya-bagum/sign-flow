@@ -1,4 +1,4 @@
-// Typed error codes shared by the app and (from Phase 2) Edge Functions. SPEC §15.
+// Typed error codes shared by the app and Edge Functions (SPEC §15). No imports: loaded by Metro and Deno.
 // Each code maps to user-facing copy under `errors.<CODE>` in src/i18n/en.json.
 
 export const APP_ERROR_CODES = [
@@ -11,11 +11,18 @@ export const APP_ERROR_CODES = [
   'AUTH_LINK_INVALID',
   'SIGN_IN_CANCELLED',
   'PROVIDER_UNAVAILABLE',
+  // Files (SPEC §15)
+  'FILE_UNSUPPORTED',
+  'FILE_TOO_LARGE',
+  'UPLOAD_FAILED',
+  'PDF_RENDER_FAILED',
   // General (SPEC §15)
   'NETWORK_OFFLINE',
   'RATE_LIMITED',
   'FORBIDDEN',
   'INVALID_STATE',
+  'INVALID_INPUT',
+  'NOT_FOUND',
   'UNKNOWN',
 ] as const;
 

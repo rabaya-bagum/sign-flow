@@ -25,7 +25,7 @@ select throws_ok($$ select public.log_event('d0000000-0000-4000-8000-0000000000d
 
 select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-0000-4000-8000-000000000002","role":"authenticated"}', true);
 select results_eq($$ select count(*)::int from public.document_events where document_id = 'd0000000-0000-4000-8000-0000000000d2' $$,
-  array[2], 'active participant can read the document''s events');
+  array[3], 'active participant can read the document''s events');  -- created (trigger), sent, reminder
 
 select set_config('request.jwt.claims', '{"sub":"cccccccc-0000-4000-8000-000000000003","role":"authenticated"}', true);
 select is_empty($$ select 1 from public.document_events $$, 'pending participant cannot read events');

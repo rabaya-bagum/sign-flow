@@ -209,7 +209,7 @@ Deep link scheme: `signflow://`. Universal/App Links domain: `sign.<your-domain>
 
 ### 5.3 Creation wizard `[P2–P5]` MUST
 A single linear flow with a step indicator. Users can go back without losing state. Drafts are saved
-server-side from step 2 onward.
+server-side as soon as step 1's file is uploaded (title defaults to the file name).
 
 1. **Source** `[P2]`: Choose PDF (Files) · Scan document (camera) · Photos → PDF (images converted
    server-side). Validate file type and size before uploading (§15).
@@ -353,8 +353,9 @@ server-side from step 2 onward.
 | Duplicate (SHOULD) | ✅ | ✅ | ✅ | ✅ (creates a new draft from the original PDF + fields) |
 | Download original | ✅ | ✅ | ✅ | ✅ |
 | Download completed + certificate | — | — | ✅ | — |
-| Delete | ✅ hard delete | ❌ (void first) | Hide from my library | Hide from my library |
+| Delete | ✅ soft delete (`deleted_at`), files removed | ❌ (void first) | Hide from my library | Hide from my library |
 
+**Deleting a draft** is done through the `delete-draft` Edge Function: it sets `documents.deleted_at`, removes its storage objects immediately, and logs `DOCUMENT_DELETED`. Soft-deleted rows are excluded by RLS and every RPC. The row is kept so the append-only audit log never dangles.
 **"Delete" after sending only hides the document for that user** (`document_user_state.hidden_at`).
 Recipients keep their access. Records are retained per §17.2.
 
@@ -463,6 +464,7 @@ create table documents (
   sent_at timestamptz,
   completed_at timestamptz,
   voided_at timestamptz,
+  deleted_at timestamptz,             -- drafts only; soft delete (§6.2)
   void_reason text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -664,6 +666,7 @@ where noted, and audit logging through a shared `logEvent()` that captures IP an
 | `remind` | owner | Re-notify active, un-acted recipients (rate-limited) |
 | `finalize-document` | internal | Flatten values into a copy of the original (`pdf-lib`), generate the certificate, hash, store, set `completed`, email the final PDF + certificate to all participants including CC |
 | `get-download-url` | auth participant | Authorize, log, and return a signed URL |
+| `delete-draft` | owner | Soft-delete a draft, remove its storage objects, log `DOCUMENT_DELETED` |
 | `cron-tick` | `pg_cron` every 15 min | Send due reminders; expire overdue documents; clean up `uploads-tmp` |
 | `register-push-token` | auth | Upsert push token |
 | `delete-account` | auth | §17.3 |
@@ -732,7 +735,7 @@ SignFlow brand only.
 | Table | SELECT | INSERT | UPDATE | DELETE |
 |---|---|---|---|---|
 | profiles | self; also name/email of co-participants via a view | trigger | self (not `email`) | via `delete-account` |
-| documents | owner, or linked recipient whose group is active/past (CC: after completion) | owner, `status='draft'` | owner while `draft`, limited columns (title, email fields, options) — never `status`, paths, hashes | owner while `draft` |
+| documents | owner, or linked recipient whose group is active/past (CC: after completion) | owner, `status='draft'` | owner while `draft`, limited columns (title, email fields, options) — never `status`, paths, hashes, `deleted_at` | ❌ (via `delete-draft`) |
 | document_pages | as documents | service role | — | — |
 | document_recipients | owner; linked recipient sees all rows of the document (names/emails/status) | owner while draft | owner while draft | owner while draft |
 | document_fields | owner; linked recipient sees **own fields** + others' fields that have values | owner while draft | owner while draft | owner while draft |

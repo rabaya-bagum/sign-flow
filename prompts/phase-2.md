@@ -80,8 +80,9 @@ project, so get them right.
   already in storage, or `{ document_id, image_paths[] }` for images in `uploads-tmp`.
   - PDF path: download `original.pdf` from storage, verify the `%PDF-` magic bytes, size ≤ 25 MB, loads in
     `pdf-lib` **without** `ignoreEncryption` (encrypted → `FILE_UNSUPPORTED`), page count 1–200. Compute
-    SHA-256. Insert `document_pages` (displayed width/height in points after applying `/Rotate`, plus the
-    rotation). Set `original_path`, `original_sha256`, `file_size_bytes`, `page_count` using the service
+    SHA-256. Insert `document_pages` per the SPEC §8.1 visible-box convention: CropBox ∩ MediaBox, displayed
+    width/height in points after applying `/Rotate`, the box origin (`box_x_pt`, `box_y_pt`), and the
+    rotation. Set `original_path`, `original_sha256`, `file_size_bytes`, `page_count` using the service
     role.
   - Images path: ≤ 30 images, JPEG/PNG only (HEIC is converted on device). One page per image, A4 with
     orientation matching the image, image fitted with a 24 pt margin. Write `original.pdf`, then run the

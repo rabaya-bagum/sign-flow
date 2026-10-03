@@ -15,7 +15,8 @@
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
-    "gen:types": "supabase gen types typescript --local > src/types/database.ts"
+    "gen:types": "supabase gen types typescript --local > src/types/database.ts",
+    "test:integration": "jest --config jest.integration.config.js --runInBand"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -82,7 +83,8 @@
     },
     "testPathIgnorePatterns": [
       "/node_modules/",
-      "/supabase/"
+      "/supabase/",
+      "/integration/"
     ]
   }
 }

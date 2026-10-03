@@ -66,10 +66,11 @@ export function ListRow({
         },
       ]}
     >
-      {left ??
-        (icon ? (
-          <Ionicons name={icon} size={22} color={theme.colors[iconColor]} style={styles.icon} />
-        ) : null)}
+      {left ? (
+        <View style={styles.icon}>{left}</View>
+      ) : icon ? (
+        <Ionicons name={icon} size={22} color={theme.colors[iconColor]} style={styles.icon} />
+      ) : null}
       <View
         style={[
           styles.body,

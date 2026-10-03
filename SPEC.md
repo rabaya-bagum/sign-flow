@@ -140,7 +140,8 @@ The display status is **derived per viewer** (see §6.3), not stored.
 app/
   _layout.tsx                 # providers: theme, query client, auth, i18n
   index.tsx                   # splash → redirect by auth state
-  (onboarding)/index.tsx      # 3 cards, shown once (flag in secure storage)
+  (onboarding)/onboarding.tsx # 3 cards, shown once (flag in device storage)
+  auth/callback.tsx           # email-link landing: exchanges the PKCE code
   (auth)/
     welcome.tsx
     sign-in.tsx
@@ -740,7 +741,7 @@ SignFlow brand only.
 
 | Table | SELECT | INSERT | UPDATE | DELETE |
 |---|---|---|---|---|
-| profiles | self; also name/email of co-participants via a view | trigger | self (not `email`) | via `delete-account` |
+| profiles | self; co-participants' `id`, `full_name`, `avatar_path` via the `public_profiles` view | trigger | self (not `email`) | via `delete-account` |
 | documents | owner, or linked recipient whose group is active/past (CC: after completion) | owner, `status='draft'` | owner while `draft`, limited columns (title, email fields, options) — never `status`, paths, hashes, `deleted_at` | ❌ (via `delete-draft`) |
 | document_pages | as documents | service role | — | — |
 | document_recipients | owner; linked recipient sees all rows of the document (names/emails/status) | owner while draft | owner while draft | owner while draft |
@@ -754,6 +755,12 @@ SignFlow brand only.
 
 - Implement helper functions `is_document_owner(doc)` and `is_active_participant(doc)` as
   `security definer`, `stable`, with `set search_path = ''`.
+- **Active participant** = a recipient row linked to the caller (`user_id = auth.uid()`) whose status is
+  not `pending`, on a non-draft, non-deleted document. Status leaves `pending` when the recipient's
+  signing group activates (CC: at completion), so this one rule covers active/past groups,
+  CC-after-completion and terminal states. Server code must keep recipient status in step with this.
+- `public_profiles` is a view that runs with the owner's rights and returns only the caller and people
+  who share an accessible document with them, never phone numbers or preferences.
 - Column-level `revoke update` on protected columns in addition to RLS.
 - **Rate limits:** auth email resend (1/min); `send-document`, `remind` (per user); all guest endpoints
   (per token + IP); OTP verify (5 attempts).

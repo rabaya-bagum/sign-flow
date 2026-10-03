@@ -1,3 +1,5 @@
+This is SignFlow, an Expo/React Native e-signature app. `SPEC.md` is the source of truth; per-phase prompts live in `prompts/` and phase reports in `docs/phase-reports/`.
+
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
 ## Expo has changed — do not trust your training data
@@ -25,7 +27,7 @@ Run lint and typecheck before declaring any task done.
 
 ## Navigation & Routing
 
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
+- Use **Expo Router** for all navigation. In this repo routes live in `app/` (repo root) — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code in `src/` (see SPEC.md §18).
 - Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
 - Docs: https://docs.expo.dev/router/introduction.md
 

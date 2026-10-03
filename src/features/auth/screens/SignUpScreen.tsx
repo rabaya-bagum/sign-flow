@@ -80,16 +80,29 @@ export function SignUpScreen() {
             error={termsError}
             testID="sign-up-terms"
           >
-            <View style={styles.terms}>
-              <AppText variant="subhead">{t('auth.acceptTermsPrefix')}</AppText>
-              <TextLink title={t('auth.terms')} role="link" onPress={() => void openLink(LEGAL_URLS.terms)} />
-              <AppText variant="subhead">{t('auth.and')}</AppText>
-              <TextLink
-                title={t('auth.privacyPolicy')}
-                role="link"
+            {/* Inline links inside a sentence (WCAG 2.5.8 inline exception to target size). */}
+            <AppText variant="subhead">
+              {`${t('auth.acceptTermsPrefix')} `}
+              <AppText
+                variant="subhead"
+                color="primary"
+                weight="600"
+                accessibilityRole="link"
+                onPress={() => void openLink(LEGAL_URLS.terms)}
+              >
+                {t('auth.terms')}
+              </AppText>
+              {` ${t('auth.and')} `}
+              <AppText
+                variant="subhead"
+                color="primary"
+                weight="600"
+                accessibilityRole="link"
                 onPress={() => void openLink(LEGAL_URLS.privacy)}
-              />
-            </View>
+              >
+                {t('auth.privacyPolicy')}
+              </AppText>
+            </AppText>
           </Checkbox>
         )}
       />
@@ -110,6 +123,5 @@ export function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
-  terms: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 4 },
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 16 },
 });

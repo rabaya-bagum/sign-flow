@@ -473,8 +473,10 @@ create table documents (
 create table document_pages (
   document_id uuid references documents(id) on delete cascade,
   page_number int not null,            -- 1-based
-  width_pt numeric not null,           -- as displayed (after /Rotate applied)
+  width_pt numeric not null,           -- visible box (CropBox ∩ MediaBox) as displayed, after /Rotate
   height_pt numeric not null,
+  box_x_pt numeric not null default 0, -- lower-left of the visible box in PDF user space (unrotated);
+  box_y_pt numeric not null default 0, --   non-zero for offset MediaBox/CropBox
   rotation int not null default 0 check (rotation in (0,90,180,270)),
   primary key (document_id, page_number)
 );
@@ -622,13 +624,17 @@ create table rate_limits (               -- simple fixed-window limiter for Edge
 - `full_name` / `email`: `{ fontSize, align }`
 
 ### 8.1 Coordinate contract (critical)
-1. The server extracts each page's displayed size and rotation into `document_pages` at upload.
+1. The server extracts each page's **visible box** (CropBox intersected with MediaBox, which is what
+   pdf.js renders), its origin (`box_x_pt`, `box_y_pt`), and its rotation into `document_pages` at upload.
+   `width_pt`/`height_pt` are the displayed dimensions after rotation.
 2. The client renders a page at any zoom, and maps tap/drag positions to fractions of the rendered page
-   box (top-left origin).
-3. `finalize-document` converts fractions to PDF user space: `pdfX = x * width_pt`,
-   `pdfY = height_pt - (y + h) * height_pt`, then applies the inverse of the page's `/Rotate`.
-4. **Golden test:** a fixture PDF set (portrait, landscape, rotated 90°, mixed sizes) must round-trip
-   field positions within ±1 pt (§19).
+   box (top-left origin, as displayed).
+3. One shared, pure function in `/shared/geometry.ts` converts a displayed fractional rect to an
+   unrotated PDF user-space rect: undo the displayed rotation, scale by the unrotated box size, flip Y,
+   and add the box origin. App, web, and Edge Functions all import it. Nobody re-implements it.
+4. **Golden tests:** a fixture PDF set (portrait, landscape, rotation 90/180/270, mixed sizes, offset
+   CropBox, non-zero MediaBox origin) must round-trip field positions within ±1 pt. The reference is
+   pdf.js's own `viewport.convertToPdfPoint` (§19).
 
 ---
 
@@ -665,7 +671,7 @@ where noted, and audit logging through a shared `logEvent()` that captures IP an
 | `void-document` | owner | Void with reason, revoke tokens, notify active recipients |
 | `remind` | owner | Re-notify active, un-acted recipients (rate-limited) |
 | `finalize-document` | internal | Flatten values into a copy of the original (`pdf-lib`), generate the certificate, hash, store, set `completed`, email the final PDF + certificate to all participants including CC |
-| `get-download-url` | auth participant | Authorize, log, and return a signed URL |
+| `get-download-url` | auth participant | Authorize, log, and return a signed URL. `purpose: 'view' \| 'download'` logs `DOCUMENT_VIEWED` (de-duplicated: one per user per document per 30 min; never changes recipient status) or `DOCUMENT_DOWNLOADED` |
 | `delete-draft` | owner | Soft-delete a draft, remove its storage objects, log `DOCUMENT_DELETED` |
 | `cron-tick` | `pg_cron` every 15 min | Send due reminders; expire overdue documents; clean up `uploads-tmp` |
 | `register-push-token` | auth | Upsert push token |

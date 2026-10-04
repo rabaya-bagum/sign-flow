@@ -24,6 +24,8 @@ import { formatBytes } from '@/utils/formatBytes';
 import * as ImagePicker from 'expo-image-picker';
 import { usePreferencesStore } from '@/store/preferences';
 
+import { useSavedSignatures } from '@/features/signatures/hooks';
+
 import { useAvatarMutations, useAvatarUrl, useProfile } from './hooks';
 import { themeLabelKey } from './themeLabels';
 
@@ -54,6 +56,7 @@ export function AccountScreen() {
   const avatarUrl = useAvatarUrl(profile.data);
   const avatar = useAvatarMutations();
   const storage = useStorageUsage();
+  const signatures = useSavedSignatures();
 
   const choosePhoto = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -126,8 +129,24 @@ export function AccountScreen() {
       </Section>
 
       <Section title={t('account.signature')}>
-        <ListRow title={t('account.savedSignature')} subtitle={comingIn(3)} disabled separator />
-        <ListRow title={t('account.savedInitials')} subtitle={comingIn(3)} disabled />
+        <ListRow
+          title={t('account.signaturesRow')}
+          icon="create-outline"
+          iconColor="primary"
+          subtitle={
+            signatures.data
+              ? signatures.data.length
+                ? t('account.signaturesSummary', {
+                    signatures: signatures.data.filter((s) => s.kind === 'signature').length,
+                    initials: signatures.data.filter((s) => s.kind === 'initials').length,
+                  })
+                : t('account.signaturesNone')
+              : undefined
+          }
+          onPress={() => router.push('/account/signatures')}
+          chevron
+          testID="account-signatures"
+        />
       </Section>
 
       <Section title={t('account.security')}>

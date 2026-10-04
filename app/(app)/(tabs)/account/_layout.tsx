@@ -20,6 +20,7 @@ export default function AccountLayout() {
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="profile" options={{ title: t('account.editProfile') }} />
       <Stack.Screen name="preferences" options={{ title: t('account.preferences') }} />
+      <Stack.Screen name="signatures" options={{ title: t('signatures.screenTitle') }} />
     </Stack>
   );
 }

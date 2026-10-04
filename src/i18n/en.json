@@ -175,8 +175,6 @@
     "phoneOptional": "Phone (optional)",
     "profileSaved": "Profile saved.",
     "signature": "Signature",
-    "savedSignature": "Saved signature",
-    "savedInitials": "Saved initials",
     "security": "Security",
     "changePassword": "Change password",
     "biometrics": "Face ID / Touch ID",
@@ -208,7 +206,10 @@
     "removePhoto": "Remove photo",
     "photoTitle": "Profile photo",
     "photoUpdated": "Photo updated.",
-    "storageSummary": "{{size}} · {{count}} documents"
+    "storageSummary": "{{size}} · {{count}} documents",
+    "signaturesRow": "Signatures & initials",
+    "signaturesSummary": "{{signatures}} signatures · {{initials}} initials",
+    "signaturesNone": "None saved"
   },
   "dev": {
     "componentsTitle": "Component gallery"
@@ -403,6 +404,22 @@
     "kind_signature": "signature",
     "kind_initials": "initials",
     "loadingTools": "Loading drawing tools…",
-    "fileTooLarge": "Choose an image under 10 MB."
+    "fileTooLarge": "Choose an image under 10 MB.",
+    "screenTitle": "Signatures",
+    "sectionSignatures": "Signatures",
+    "sectionInitials": "Initials",
+    "empty": "Save a signature to sign faster.",
+    "emptyTitle": "No saved signatures",
+    "addSignature": "Add signature",
+    "addInitials": "Add initials",
+    "atLimit": "Maximum of 5 saved",
+    "itemActions": "Signature options",
+    "setDefault": "Set as default",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete this {{kind}}?",
+    "deleteConfirmBody": "Documents you already signed keep their copy. This can't be undone.",
+    "deleted": "Deleted.",
+    "loadError": "We couldn't load your signatures.",
+    "itemHint": "Opens options"
   }
 }

@@ -15,6 +15,13 @@ jest.mock('../api', () => ({
 }));
 jest.mock('@/features/auth/api', () => ({ signOut: jest.fn() }));
 jest.mock('@/lib/openLink', () => ({ openLink: jest.fn() }));
+jest.mock('@/features/signatures/api', () => ({
+  listSavedSignatures: jest.fn(async () => [
+    { id: 's1', kind: 'signature' },
+    { id: 's2', kind: 'signature' },
+    { id: 'i1', kind: 'initials' },
+  ]),
+}));
 jest.mock('@/features/documents/api', () => ({
   getStorageUsage: jest.fn(async () => ({ bytes: 4436650, documentCount: 6 })),
 }));
@@ -49,6 +56,7 @@ describe('AccountScreen', () => {
     expect(screen.getByRole('button', { name: 'Theme, System' })).toBeOnTheScreen();
     expect(await screen.findByLabelText('Used storage, 4.2 MB · 6 documents')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Add photo' })).toBeOnTheScreen();
+    expect(await screen.findByText('2 signatures · 1 initials')).toBeOnTheScreen();
   });
 
   it('asks for confirmation before logging out', async () => {

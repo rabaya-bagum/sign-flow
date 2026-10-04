@@ -19,6 +19,12 @@ export function RecipientsPlaceholderScreen() {
         testID="placeholder"
       />
       <AppButton
+        title={t('upload.continueToFields')}
+        onPress={() => router.replace({ pathname: '/documents/[id]/fields', params: { id } })}
+        testID="recipients-next"
+      />
+      <AppButton
+        variant="secondary"
         title={t('upload.saveAndClose')}
         onPress={() => router.replace({ pathname: '/documents/[id]', params: { id } })}
         testID="recipients-close"

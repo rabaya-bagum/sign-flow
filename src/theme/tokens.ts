@@ -47,6 +47,27 @@ export const palette = {
   },
 } as const;
 
+/**
+ * Field colours per recipient (SPEC §5.6): 8 hues that stay distinguishable in light and dark mode and
+ * against white paper. Index = recipient position.
+ */
+export const recipientColors = [
+  '#2B59D9',
+  '#C2410C',
+  '#15803D',
+  '#7C3AED',
+  '#DC2626',
+  '#0E7490',
+  '#A16207',
+  '#BE185D',
+] as const;
+
+export function recipientColor(index: number): string {
+  return recipientColors[
+    ((index % recipientColors.length) + recipientColors.length) % recipientColors.length
+  ]!;
+}
+
 export type ColorScheme = keyof typeof palette;
 export type ColorTokens = { [K in keyof (typeof palette)['light']]: string };
 export type ColorToken = keyof ColorTokens;

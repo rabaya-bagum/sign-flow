@@ -41,3 +41,12 @@ describe.each(['light', 'dark'] as ColorScheme[])('%s tokens meet WCAG AA', (sch
     expect(contrastRatio(p.foreground, p.background)).toBeGreaterThanOrEqual(AA_TEXT);
   });
 });
+
+describe('recipient colours', () => {
+  const { recipientColors, palette } = jest.requireActual<typeof import('../tokens')>('../tokens');
+  it.each(recipientColors)('%s: white text ≥ 4.5:1, border ≥ 3:1 on both backgrounds', (color) => {
+    expect(contrastRatio(color, '#FFFFFF')).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(color, palette.light.background)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(color, palette.dark.background)).toBeGreaterThanOrEqual(3);
+  });
+});

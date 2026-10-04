@@ -179,9 +179,9 @@ export function DocumentDetailsScreen() {
         {isDraftOwner && !doc.uploadIncomplete ? (
           <AppButton
             title={t('details.continueEditing')}
-            variant="secondary"
-            disabled
-            accessibilityHint={t('details.continueEditingPlaceholder')}
+            icon="create-outline"
+            onPress={() => router.push({ pathname: '/documents/[id]/fields', params: { id: doc.id } })}
+            testID="details-edit-fields"
           />
         ) : null}
         {keys.includes('retryUpload') ? (

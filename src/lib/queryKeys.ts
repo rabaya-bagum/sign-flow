@@ -6,6 +6,7 @@ export const queryKeys = {
     list: (params: unknown) => ['documents', 'list', params] as const,
     detail: (id: string) => ['documents', 'detail', id] as const,
     viewUrl: (id: string) => ['documents', 'view-url', id] as const,
+    fields: (id: string) => ['documents', 'fields', id] as const,
     recipients: (id: string) => ['documents', 'recipients', id] as const,
     senders: () => ['documents', 'senders'] as const,
   },

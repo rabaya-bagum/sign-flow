@@ -177,12 +177,28 @@ export function DocumentDetailsScreen() {
       <SectionHeader title={t('details.actions')} />
       <View style={styles.actions}>
         {isDraftOwner && !doc.uploadIncomplete ? (
-          <AppButton
-            title={t('details.continueEditing')}
-            icon="create-outline"
-            onPress={() => router.push({ pathname: '/documents/[id]/fields', params: { id: doc.id } })}
-            testID="details-edit-fields"
-          />
+          <>
+            <AppButton
+              title={t('details.reviewAndSend')}
+              icon="paper-plane-outline"
+              onPress={() => router.push({ pathname: '/documents/[id]/review', params: { id: doc.id } })}
+              testID="details-review"
+            />
+            <AppButton
+              title={t('details.editRecipients')}
+              icon="people-outline"
+              variant="secondary"
+              onPress={() => router.push({ pathname: '/documents/new/recipients', params: { id: doc.id } })}
+              testID="details-edit-recipients"
+            />
+            <AppButton
+              title={t('details.continueEditing')}
+              icon="create-outline"
+              variant="secondary"
+              onPress={() => router.push({ pathname: '/documents/[id]/fields', params: { id: doc.id } })}
+              testID="details-edit-fields"
+            />
+          </>
         ) : null}
         {keys.includes('retryUpload') ? (
           <AppButton

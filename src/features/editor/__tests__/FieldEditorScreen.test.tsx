@@ -233,14 +233,14 @@ describe('FieldEditorScreen', () => {
     expect(screen.queryByTestId('field-toolbar')).toBeNull();
   });
 
-  it('saves before moving on with Next', async () => {
-    const { router } = jest.requireMock<{ router: { replace: jest.Mock } }>('expo-router');
+  it('saves before moving on to Review with Next', async () => {
+    const { router } = jest.requireMock<{ router: { push: jest.Mock } }>('expo-router');
     await openEditor();
     await fireEvent.press(screen.getByTestId('tool-text'));
     await act(async () => mockSurface.props!.onTap!({ page: 1, x: 0.3, y: 0.3 }));
     await fireEvent.press(screen.getByTestId('editor-next'));
     await waitFor(() =>
-      expect(router.replace).toHaveBeenCalledWith({ pathname: '/documents/[id]', params: { id: 'd1' } }),
+      expect(router.push).toHaveBeenCalledWith({ pathname: '/documents/[id]/review', params: { id: 'd1' } }),
     );
     expect(api.saveFields).toHaveBeenCalled();
   });

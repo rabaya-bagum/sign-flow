@@ -33,6 +33,7 @@ export default function AppLayout() {
         name="documents/[id]/fields"
         options={{ title: t('editor.title'), gestureEnabled: false }}
       />
+      <Stack.Screen name="documents/[id]/review" options={{ title: t('review.title') }} />
     </Stack>
   );
 }

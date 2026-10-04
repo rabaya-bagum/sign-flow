@@ -1,3 +1,3 @@
-import { RecipientsPlaceholderScreen } from '@/features/upload/screens/RecipientsPlaceholderScreen';
+import { RecipientsStepScreen } from '@/features/recipients/RecipientsStepScreen';
 
-export default RecipientsPlaceholderScreen;
+export default RecipientsStepScreen;

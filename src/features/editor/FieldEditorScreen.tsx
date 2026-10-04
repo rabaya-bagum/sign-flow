@@ -174,7 +174,7 @@ export function FieldEditorScreen() {
   };
 
   const next = async () => {
-    if (await autosave.flush()) router.replace({ pathname: '/documents/[id]', params: { id } });
+    if (await autosave.flush()) router.push({ pathname: '/documents/[id]/review', params: { id } });
   };
 
   const statusText =

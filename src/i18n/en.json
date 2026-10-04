@@ -54,6 +54,8 @@
     "FILE_TOO_LARGE": "This file is too large. PDFs can be up to 25 MB and 200 pages; images up to 10 MB each.",
     "UPLOAD_FAILED": "The upload didn't finish. Check your connection and try again.",
     "PDF_RENDER_FAILED": "We couldn't read this PDF. It may be damaged. Try exporting it again.",
+    "SIGNATURE_LIMIT": "You can save up to 5 of each. Delete one in Account → Signatures to save another.",
+    "SIGNATURE_TOO_SIMPLE": "That's too small to use as a signature. Try again, a little bigger.",
     "NETWORK_OFFLINE": "You're offline. Check your connection and try again.",
     "RATE_LIMITED": "Too many attempts. Please wait a moment and try again.",
     "FORBIDDEN": "You don't have access to this.",

@@ -51,6 +51,8 @@ export function toAppError(error: unknown): AppError {
       return new AppError('FORBIDDEN', error.message, { cause: error });
     }
     if (error.code === 'PGRST116') return new AppError('FORBIDDEN', error.message, { cause: error });
+    // Raised by the saved_signatures insert trigger (5 per kind).
+    if (error.code === 'SF001') return new AppError('SIGNATURE_LIMIT', error.message, { cause: error });
   }
 
   return new AppError('UNKNOWN', error instanceof Error ? error.message : undefined, { cause: error });

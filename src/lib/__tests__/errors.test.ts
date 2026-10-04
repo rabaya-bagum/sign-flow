@@ -27,6 +27,7 @@ describe('toAppError', () => {
 
   it('maps PostgREST permission errors to FORBIDDEN', () => {
     expect(toAppError({ code: '42501', message: 'permission denied' }).code).toBe('FORBIDDEN');
+    expect(toAppError({ code: 'SF001', message: 'At most 5 saved signature per user' }).code).toBe('SIGNATURE_LIMIT');
   });
 
   it('passes AppErrors through and falls back to UNKNOWN', () => {

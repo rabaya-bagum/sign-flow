@@ -425,6 +425,57 @@ export type Database = {
         };
         Relationships: [];
       };
+      saved_signatures: {
+        Row: {
+          created_at: string;
+          font_key: string | null;
+          id: string;
+          is_default: boolean;
+          kind: Database['public']['Enums']['signature_kind'];
+          method: Database['public']['Enums']['signature_method'];
+          storage_path: string;
+          typed_text: string | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          font_key?: string | null;
+          id?: string;
+          is_default?: boolean;
+          kind: Database['public']['Enums']['signature_kind'];
+          method: Database['public']['Enums']['signature_method'];
+          storage_path: string;
+          typed_text?: string | null;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          font_key?: string | null;
+          id?: string;
+          is_default?: boolean;
+          kind?: Database['public']['Enums']['signature_kind'];
+          method?: Database['public']['Enums']['signature_method'];
+          storage_path?: string;
+          typed_text?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'saved_signatures_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'saved_signatures_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'public_profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Views: {
       public_profiles: {
@@ -600,6 +651,7 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      set_default_signature: { Args: { p_id: string }; Returns: undefined };
       shares_document_with: { Args: { p_profile_id: string }; Returns: boolean };
     };
     Enums: {
@@ -626,6 +678,8 @@ export type Database = {
         | 'DOCUMENT_DELETED';
       recipient_role: 'signer' | 'approver' | 'viewer' | 'cc';
       recipient_status: 'pending' | 'sent' | 'viewed' | 'signed' | 'approved' | 'declined';
+      signature_kind: 'signature' | 'initials';
+      signature_method: 'drawn' | 'typed' | 'uploaded';
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -763,6 +817,8 @@ export const Constants = {
       ],
       recipient_role: ['signer', 'approver', 'viewer', 'cc'],
       recipient_status: ['pending', 'sent', 'viewed', 'signed', 'approved', 'declined'],
+      signature_kind: ['signature', 'initials'],
+      signature_method: ['drawn', 'typed', 'uploaded'],
     },
   },
 } as const;

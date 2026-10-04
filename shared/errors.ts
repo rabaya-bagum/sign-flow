@@ -16,6 +16,9 @@ export const APP_ERROR_CODES = [
   'FILE_TOO_LARGE',
   'UPLOAD_FAILED',
   'PDF_RENDER_FAILED',
+  // Signatures (SPEC §5.7)
+  'SIGNATURE_LIMIT',
+  'SIGNATURE_TOO_SIMPLE',
   // General (SPEC §15)
   'NETWORK_OFFLINE',
   'RATE_LIMITED',

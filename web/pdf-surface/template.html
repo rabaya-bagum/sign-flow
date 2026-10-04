@@ -13,6 +13,7 @@
       html, body { margin: 0; height: 100%; overflow: hidden; background: #f7f8fa; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
       #viewer { position: absolute; inset: 0; overflow: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; }
       #pages { padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 12px; width: max-content; min-width: 100%; box-sizing: border-box; }
+      body.preview #viewer { overflow: hidden; pointer-events: none; }
       .page { position: relative; background: #fff; box-shadow: 0 1px 3px rgba(16, 24, 40, 0.15); flex: none; }
       .page canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
       .overlays { position: absolute; inset: 0; pointer-events: none; }

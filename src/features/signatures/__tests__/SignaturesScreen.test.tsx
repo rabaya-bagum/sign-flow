@@ -85,12 +85,16 @@ describe('SignaturesScreen', () => {
     await fireEvent.press(within(screen.getByTestId('signature-actions')).getByText('Delete'));
     expect(mocked.deleteSignature).not.toHaveBeenCalled();
     expect(screen.getByText('Delete this signature?')).toBeOnTheScreen();
-    await fireEvent.press(within(screen.getByTestId('signature-delete-confirm')).getByRole('button', { name: 'Delete' }));
+    await fireEvent.press(
+      within(screen.getByTestId('signature-delete-confirm')).getByRole('button', { name: 'Delete' }),
+    );
     await waitFor(() => expect(mocked.deleteSignature).toHaveBeenCalledWith(a, expect.anything()));
   });
 
   it('disables adding at the limit of 5', async () => {
-    mocked.listSavedSignatures.mockResolvedValue(Array.from({ length: 5 }, (_, i) => row({ id: `s${i}`, is_default: i === 0 })));
+    mocked.listSavedSignatures.mockResolvedValue(
+      Array.from({ length: 5 }, (_, i) => row({ id: `s${i}`, is_default: i === 0 })),
+    );
     await renderWithProviders(<SignaturesScreen />);
     expect(await screen.findByRole('button', { name: 'Maximum of 5 saved' })).toBeDisabled();
   });

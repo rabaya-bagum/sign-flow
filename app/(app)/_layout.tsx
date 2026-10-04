@@ -28,6 +28,7 @@ export default function AppLayout() {
       />
       <Stack.Screen name="documents/new" options={{ presentation: 'modal', headerShown: false }} />
       <Stack.Screen name="documents/[id]/index" options={{ title: t('details.title') }} />
+      <Stack.Screen name="documents/[id]/view" options={{ title: t('viewer.title') }} />
     </Stack>
   );
 }

@@ -2,13 +2,15 @@ import { SIGNED_URL_TTL_SECONDS } from '../../../shared/limits.ts';
 import type { RequestContext } from '../_shared/context.ts';
 import { z } from '../_shared/deps.ts';
 import { loadVisibleDocument } from '../_shared/documents.ts';
-import { logEvent } from '../_shared/events.ts';
+import { logDocumentView, logEvent } from '../_shared/events.ts';
 import { HttpError } from '../_shared/http.ts';
 import { enforceRateLimit } from '../_shared/rateLimit.ts';
 
 export const GetDownloadUrlInput = z.object({
   document_id: z.uuid(),
   kind: z.enum(['original', 'completed', 'certificate']).default('original'),
+  /** `view` opens in the in-app viewer (inline, DOCUMENT_VIEWED de-duplicated); `download` saves/shares. */
+  purpose: z.enum(['view', 'download']).default('download'),
 });
 
 export interface GetDownloadUrlResult {
@@ -29,8 +31,9 @@ export function downloadFileName(title: string): string {
 }
 
 /**
- * Authorizes the caller (owner or active participant, via RLS), logs DOCUMENT_DOWNLOADED and returns
- * a short-lived signed URL (SPEC §9, §10). Completed copies and certificates arrive in Phase 6.
+ * Authorizes the caller (owner or active participant, via RLS), logs DOCUMENT_VIEWED (purpose `view`,
+ * de-duplicated) or DOCUMENT_DOWNLOADED, and returns a short-lived signed URL (SPEC §9, §10).
+ * Completed copies and certificates arrive in Phase 6.
  */
 export async function getDownloadUrl(
   input: z.output<typeof GetDownloadUrlInput>,
@@ -42,13 +45,19 @@ export async function getDownloadUrl(
   }
   if (!doc.original_path) throw new HttpError('INVALID_STATE', 409, 'This document has no file yet');
 
-  await enforceRateLimit(ctx.admin, `download:${ctx.userId}`, 60, 60);
+  await enforceRateLimit(ctx.admin, `${input.purpose}:${ctx.userId}`, 60, 60);
 
   const fileName = downloadFileName(doc.title);
   const { data, error } = await ctx.admin.storage
     .from('documents')
     .createSignedUrl(doc.original_path, SIGNED_URL_TTL_SECONDS);
   if (error || !data) throw error ?? new Error('Could not sign URL');
+
+  if (input.purpose === 'view') {
+    // Viewing is audited but never changes recipient status (SPEC §10).
+    await logDocumentView(ctx, doc.id);
+    return { url: data.signedUrl, expires_in: SIGNED_URL_TTL_SECONDS, file_name: fileName };
+  }
 
   await logEvent(ctx, doc.id, 'DOCUMENT_DOWNLOADED', 'Document downloaded', { kind: input.kind });
   // The `download` parameter is not covered by the token, so append it ourselves, encoded exactly

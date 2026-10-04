@@ -14,6 +14,7 @@ import {
   getDocument,
   getRecipients,
   getStorageUsage,
+  getViewUrl,
   listDocuments,
   listSenders,
   markOpened,
@@ -21,6 +22,7 @@ import {
   searchDocuments,
   setHidden,
 } from './api';
+import { toAppUrl } from './download';
 import type { DocumentListParams } from './types';
 
 /** Everything that shows document data: lists, details, search, dashboard, storage usage. */
@@ -101,4 +103,21 @@ export function useMarkOpened(id: string, enabled: boolean) {
       .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all }))
       .catch((error: unknown) => console.warn('markOpened failed', error));
   }, [id, enabled, queryClient]);
+}
+
+/**
+ * Signed URL for viewing (5-minute TTL). Fetched once per screen; the surface streams the whole file
+ * right away, so it does not need refreshing while open. Retry refetches a fresh one.
+ */
+export function useViewUrl(id: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.documents.viewUrl(id),
+    queryFn: async () => toAppUrl((await getViewUrl(id)).url),
+    enabled,
+    staleTime: 4 * 60 * 1000,
+    gcTime: 0,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
 }

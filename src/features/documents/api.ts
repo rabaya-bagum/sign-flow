@@ -66,7 +66,18 @@ export function processUpload(documentId: string, imagePaths?: string[]): Promis
 export function getDownloadUrl(
   documentId: string,
 ): Promise<{ url: string; expires_in: number; file_name: string }> {
-  return invokeFunction('get-download-url', { document_id: documentId, kind: 'original' });
+  return invokeFunction('get-download-url', {
+    document_id: documentId,
+    kind: 'original',
+    purpose: 'download',
+  });
+}
+
+/** Signed URL for the in-app viewer: inline, logs DOCUMENT_VIEWED (de-duplicated server-side). */
+export function getViewUrl(
+  documentId: string,
+): Promise<{ url: string; expires_in: number; file_name: string }> {
+  return invokeFunction('get-download-url', { document_id: documentId, kind: 'original', purpose: 'view' });
 }
 
 export function deleteDraft(documentId: string): Promise<{ document_id: string; deleted: boolean }> {

@@ -23,6 +23,7 @@ import { useTheme } from '@/theme';
 import { formatBytes } from '@/utils/formatBytes';
 
 import { availableActions, type ActionTarget } from './actions';
+import { DocumentPreviewCard } from './DocumentPreviewCard';
 import { canSaveToDevice } from './download';
 import { useDocument, useMarkOpened, useRecipients } from './hooks';
 import type { Recipient } from './types';
@@ -135,16 +136,8 @@ export function DocumentDetailsScreen() {
         <InlineAlert tone="info" message={t('details.uploadIncompleteNotice')} />
       ) : null}
 
-      {!doc.uploadIncomplete ? (
-        <Card style={styles.placeholder}>
-          <AppText variant="headline">{t('details.preview')}</AppText>
-          <AppText variant="footnote" color="textSecondary">
-            {t('details.previewPlaceholder')}
-          </AppText>
-          <AppText variant="caption" color="textTertiary" weight="600">
-            {t('common.comingInPhase', { phase: 3 })}
-          </AppText>
-        </Card>
+      {!doc.uploadIncomplete && doc.pageCount ? (
+        <DocumentPreviewCard documentId={doc.id} title={doc.title} />
       ) : null}
 
       <SectionHeader title={t('details.info')} />
@@ -262,7 +255,6 @@ export function DocumentDetailsScreen() {
 const styles = StyleSheet.create({
   title: { marginTop: 12, marginBottom: 12 },
   banner: { gap: 8, marginBottom: 16 },
-  placeholder: { gap: 4 },
   empty: { padding: 16 },
   actions: { gap: 10 },
 });

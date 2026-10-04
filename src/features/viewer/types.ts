@@ -11,6 +11,8 @@ export interface PdfSurfaceProps {
   /** Short-lived signed URL of the PDF (already rebased with toAppUrl). Null shows an empty surface. */
   url: string | null;
   overlays?: SurfaceOverlay[];
+  /** false renders a static first-page preview (no scroll, zoom or taps). Default true. */
+  interactive?: boolean;
   highlightId?: string | null;
   onLoaded?: (info: { pageCount: number; pages: PageGeometry[] }) => void;
   onPageChanged?: (page: number, pageCount: number) => void;

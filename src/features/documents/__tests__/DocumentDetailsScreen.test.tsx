@@ -23,8 +23,19 @@ jest.mock('../api', () => ({
   deleteDraft: jest.fn(),
   setHidden: jest.fn(),
   renameDocument: jest.fn(),
+  getViewUrl: jest.fn(async () => ({
+    url: 'http://kong:8000/storage/v1/object/sign/documents/x.pdf?token=t',
+  })),
+}));
+const mockSurfaceProps: Record<string, unknown>[] = [];
+jest.mock('@/features/viewer', () => ({
+  PdfSurface: (props: Record<string, unknown>) => {
+    mockSurfaceProps.push(props);
+    return null;
+  },
 }));
 jest.mock('../download', () => ({
+  toAppUrl: (url: string) => url.replace('http://kong:8000', 'http://127.0.0.1:54321'),
   canSaveToDevice: false,
   shareDocument: jest.fn(async () => undefined),
   saveToDevice: jest.fn(),
@@ -146,5 +157,21 @@ describe('DocumentDetailsScreen', () => {
     mockApi.getDocument.mockRejectedValue(new AppError('NOT_FOUND'));
     await renderWithProviders(<DocumentDetailsScreen />);
     expect(await screen.findByText(/isn't available/)).toBeOnTheScreen();
+  });
+
+  it('shows a static first-page preview that opens the viewer', async () => {
+    mockApi.getDocument.mockResolvedValue(sent);
+    mockApi.getRecipients.mockResolvedValue([]);
+    await renderWithProviders(<DocumentDetailsScreen />);
+    const preview = await screen.findByTestId('details-preview');
+    await waitFor(() =>
+      expect(mockSurfaceProps.at(-1)).toMatchObject({
+        url: 'http://127.0.0.1:54321/storage/v1/object/sign/documents/x.pdf?token=t',
+        interactive: false,
+      }),
+    );
+    expect(mockApi.getViewUrl).toHaveBeenCalledWith('d1');
+    await fireEvent.press(preview);
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/documents/[id]/view', params: { id: 'd1' } });
   });
 });

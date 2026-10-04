@@ -95,6 +95,7 @@ describe('PdfSurface (native)', () => {
         url: 'https://p.test/doc.pdf?token=t',
         background: '#FFFFFF',
         pageLabel: 'Page {page} of {total}',
+        interactive: true,
       },
       { v: 1, type: 'setOverlays', overlays },
       { v: 1, type: 'highlight', id: null },

@@ -10,7 +10,7 @@ import type { PdfSurfaceError, PdfSurfaceHandle, PdfSurfaceProps } from './types
 
 /** Wires PdfSurfaceProps to a SurfaceSession; the platform component attaches its transport. */
 export function useSurface(props: PdfSurfaceProps, ref: Ref<PdfSurfaceHandle> | undefined) {
-  const { url, overlays, highlightId } = props;
+  const { url, overlays, highlightId, interactive = true } = props;
   const { t } = useTranslation();
   const theme = useTheme();
   const [session] = useState(() => new SurfaceSession());
@@ -24,8 +24,8 @@ export function useSurface(props: PdfSurfaceProps, ref: Ref<PdfSurfaceHandle> | 
   const background = theme.colors.background;
   const pageLabel = t('viewer.pageLabel', { page: '{page}', total: '{total}' });
   useEffect(() => {
-    if (url) session.send({ type: 'load', url, background, pageLabel });
-  }, [session, url, background, pageLabel]);
+    if (url) session.send({ type: 'load', url, background, pageLabel, interactive });
+  }, [session, url, background, pageLabel, interactive]);
   useEffect(() => {
     session.send({ type: 'setOverlays', overlays: overlays ?? [] });
   }, [session, overlays]);

@@ -42,10 +42,15 @@ export const surfaceCommandSchema = z.discriminatedUnion('type', [
     v,
     type: z.literal('load'),
     /** Short-lived signed URL (https, or http for local development). */
-    url: z.string().regex(/^https?:\/\//).max(4096),
+    url: z
+      .string()
+      .regex(/^https?:\/\//)
+      .max(4096),
     background: hexColor,
     /** Accessible page label template, e.g. "Page {page} of {total}". */
     pageLabel: z.string().min(1).max(100),
+    /** false: a static first-page preview (no scrolling, zoom or taps). Default true. */
+    interactive: z.boolean().optional(),
   }),
   z.object({ v, type: z.literal('goToPage'), page: z.number().int().min(1) }),
   z.object({ v, type: z.literal('setZoom'), zoom: z.number().min(1).max(4) }),
@@ -55,11 +60,26 @@ export const surfaceCommandSchema = z.discriminatedUnion('type', [
 
 export const surfaceEventSchema = z.discriminatedUnion('type', [
   z.object({ v, type: z.literal('ready') }),
-  z.object({ v, type: z.literal('loaded'), pageCount: z.number().int().min(1), pages: z.array(pageGeometrySchema) }),
-  z.object({ v, type: z.literal('pageChanged'), page: z.number().int().min(1), pageCount: z.number().int().min(1) }),
+  z.object({
+    v,
+    type: z.literal('loaded'),
+    pageCount: z.number().int().min(1),
+    pages: z.array(pageGeometrySchema),
+  }),
+  z.object({
+    v,
+    type: z.literal('pageChanged'),
+    page: z.number().int().min(1),
+    pageCount: z.number().int().min(1),
+  }),
   z.object({ v, type: z.literal('zoomChanged'), zoom: z.number().min(1).max(4) }),
   z.object({ v, type: z.literal('tap'), page: z.number().int().min(1), x: fraction, y: fraction }),
-  z.object({ v, type: z.literal('error'), code: z.enum(['PDF_RENDER_FAILED', 'NETWORK_OFFLINE']), message: z.string().max(500) }),
+  z.object({
+    v,
+    type: z.literal('error'),
+    code: z.enum(['PDF_RENDER_FAILED', 'NETWORK_OFFLINE']),
+    message: z.string().max(500),
+  }),
 ]);
 
 export type SurfaceCommand = z.infer<typeof surfaceCommandSchema>;

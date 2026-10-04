@@ -110,3 +110,33 @@ test('a tap reports the page and displayed fractions', () =>
     assert.ok(Math.abs(tap.x - 0.25) < 0.005, `x ${tap.x}`);
     assert.ok(Math.abs(tap.y - 0.75) < 0.005, `y ${tap.y}`);
   }));
+
+test('preview mode is static: no scrolling and no taps', () =>
+  withSurface(async ({ page, frame }) => {
+    const before = await page.evaluate(() => window.events.length);
+    await page.evaluate(
+      (u) =>
+        window.send({
+          type: 'load',
+          url: u,
+          background: '#FFFFFF',
+          pageLabel: 'Page {page} of {total}',
+          interactive: false,
+        }),
+      `${origin}/fixtures/pdf/portrait-3p.pdf`,
+    );
+    await page.evaluate((after) => window.waitFor('loaded', after), before);
+    await frame.waitForSelector('canvas[data-page="1"]');
+    assert.equal(
+      await frame.evaluate(() => getComputedStyle(document.getElementById('viewer')).overflow),
+      'hidden',
+    );
+    const count = await page.evaluate(() => window.events.length);
+    await frame.locator('.page[data-page="1"]').click({ position: { x: 50, y: 50 }, force: true });
+    await page.waitForTimeout(500);
+    const taps = await page.evaluate(
+      (after) => window.events.slice(after).filter((e) => e.type === 'tap').length,
+      count,
+    );
+    assert.equal(taps, 0);
+  }));

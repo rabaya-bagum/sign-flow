@@ -395,6 +395,7 @@ async function load(command: Extract<SurfaceCommand, { type: 'load' }>): Promise
   const generation = ++loadGeneration;
   loadStartedAt = performance.now();
   document.body.style.background = command.background;
+  document.body.classList.toggle('preview', command.interactive === false);
   observer?.disconnect();
   for (const p of pages) {
     p.task?.cancel();
@@ -414,7 +415,9 @@ async function load(command: Extract<SurfaceCommand, { type: 'load' }>): Promise
   try {
     await ensureWorker();
     if (generation !== loadGeneration) return;
-    const task = getDocument({ url: command.url, disableAutoFetch: true, isOffscreenCanvasSupported: false });
+    // Range requests show the first page early; the rest of the file then streams in the background
+    // (auto-fetch), so later pages never depend on the short-lived signed URL still being valid.
+    const task = getDocument({ url: command.url, isOffscreenCanvasSupported: false });
     loadingTask = task;
     let timeout: ReturnType<typeof setTimeout> | undefined;
     pdf = await Promise.race([

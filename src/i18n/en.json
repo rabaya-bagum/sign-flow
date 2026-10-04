@@ -341,7 +341,6 @@
     "rstatus_declined": "Declined",
     "actions": "Actions",
     "preview": "Preview",
-    "previewPlaceholder": "Document preview arrives in Phase 3.",
     "continueEditing": "Continue editing",
     "continueEditingPlaceholder": "Placing fields arrives in Phase 4.",
     "hiddenNotice": "Removed from your library. It stays available here.",
@@ -358,7 +357,20 @@
   "viewer": {
     "pageLabel": "Page {{page}} of {{total}}",
     "pageIndicator": "{{page}} / {{total}}",
-    "loading": "Loading document…"
+    "loading": "Loading document…",
+    "title": "Document",
+    "pageButton": "Page {{page}} of {{total}}. Choose a page",
+    "jumpTitle": "Go to page",
+    "jumpPage": "Page {{page}}",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomLevel": "{{percent}}%",
+    "share": "Share or open in another app",
+    "error": "We couldn't open this document.",
+    "retry": "Try again",
+    "previewOpen": "Open document",
+    "previewHint": "Opens the full document viewer",
+    "previewLabel": "Preview of the first page of {{title}}"
   },
   "signatures": {
     "sheetTitle_signature": "Your signature",

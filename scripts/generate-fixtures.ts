@@ -88,6 +88,16 @@ await write(
   await write('fixtures/pdf/nonzero-origin.pdf', await save(doc));
 }
 
+{
+  await write('fixtures/pdf/rotated-180.pdf', await save(await labelledPdf([{ size: LETTER, label: 'Letter with /Rotate 180', rotate: 180 }])));
+  await write('fixtures/pdf/a6.pdf', await save(await labelledPdf([{ size: A6, label: 'A6' }])));
+  await write('fixtures/pdf/a0.pdf', await save(await labelledPdf([{ size: [2383.94, 3370.39], label: 'A0' }])));
+  // Rotation combined with an offset CropBox: the hardest mapping case.
+  const doc = await labelledPdf([{ size: LETTER, label: 'Rotate 270 + CropBox 50,40', rotate: 270 }]);
+  doc.getPage(0).setCropBox(50, 40, 500, 700);
+  await write('fixtures/pdf/rotated-270-offset.pdf', await save(doc));
+}
+
 // --- Bad inputs -------------------------------------------------------------------------------
 const portrait = await Deno.readFile(out('fixtures/pdf/portrait-3p.pdf'));
 // Corrupt: keep the header but cut the file mid-stream (no xref, no trailer).

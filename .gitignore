@@ -36,3 +36,6 @@ supabase/.env
 
 # test output
 coverage/
+
+# Golden test outputs
+.golden/

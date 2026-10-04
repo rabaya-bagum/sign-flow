@@ -51,11 +51,25 @@ async function deflate(data: Uint8Array<ArrayBuffer>): Promise<Uint8Array> {
 }
 
 /** RGB noise PNG (does not compress, so its size ≈ width × height × 3). */
-export async function noisePng(width: number, height: number): Promise<Uint8Array> {
+export function noisePng(width: number, height: number): Promise<Uint8Array> {
   const raw = new Uint8Array((width * 3 + 1) * height);
   for (let o = 0; o < raw.length; o += 65536)
     crypto.getRandomValues(raw.subarray(o, Math.min(o + 65536, raw.length)));
   for (let y = 0; y < height; y++) raw[y * (width * 3 + 1)] = 0; // filter type: none
+  return encodePng(width, height, raw);
+}
+
+/** RGB PNG from a per-pixel function. */
+export function rgbPng(width: number, height: number, pixel: (x: number, y: number) => [number, number, number]) {
+  const raw = new Uint8Array((width * 3 + 1) * height);
+  for (let y = 0; y < height; y++) {
+    raw[y * (width * 3 + 1)] = 0;
+    for (let x = 0; x < width; x++) raw.set(pixel(x, y), y * (width * 3 + 1) + 1 + x * 3);
+  }
+  return encodePng(width, height, raw);
+}
+
+async function encodePng(width: number, height: number, raw: Uint8Array<ArrayBuffer>): Promise<Uint8Array> {
   const chunk = (type: string, data: Uint8Array) => {
     const body = new Uint8Array(4 + data.length);
     body.set(new TextEncoder().encode(type));

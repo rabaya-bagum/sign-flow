@@ -174,7 +174,10 @@ export function FieldEditorScreen() {
   };
 
   const next = async () => {
-    if (await autosave.flush()) router.push({ pathname: '/documents/[id]/review', params: { id } });
+    if (!(await autosave.flush())) return;
+    // Later steps read the same query: give them the saved set rather than an older cached copy.
+    queryClient.setQueryData(queryKeys.documents.fields(id), state.fields);
+    router.push({ pathname: '/documents/[id]/review', params: { id } });
   };
 
   const statusText =

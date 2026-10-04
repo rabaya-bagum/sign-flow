@@ -62,7 +62,7 @@ branding**. No third-party trademarks, icons, layouts, colors, or copyrighted UI
 | Forms                   | React Hook Form + Zod                                                                                                                               | Zod schemas shared between client and Edge Functions where possible (`/shared`)                                                                                                                          |
 | Backend                 | Supabase: Postgres, Auth, Storage, Edge Functions (Deno)                                                                                            | Local dev via Supabase CLI; **all schema changes as migrations**                                                                                                                                         |
 | Scheduling              | `pg_cron` + `pg_net` → Edge Function                                                                                                                | Reminders, expiry, cleanup                                                                                                                                                                               |
-| Email                   | Resend (behind an `EmailProvider` interface)                                                                                                        | Supabase only sends auth emails; transactional email is ours                                                                                                                                             |
+| Email                   | Resend (behind an `EmailProvider` interface); local dev and tests use Mailpit's HTTP API                                                            | Supabase only sends auth emails; transactional email is ours (`_shared/email`; `RESEND_API_KEY` in production, `MAILPIT_API_URL` locally)                                                                |
 | Push                    | `expo-notifications` + Expo Push API (called from Edge Functions)                                                                                   |                                                                                                                                                                                                          |
 | PDF render (app)        | **One offline pdf.js "surface"** (`web/pdf-surface` → `assets/pdf-surface/surface.html`): `react-native-webview` on native, sandboxed iframe on web | One rendering engine = one coordinate system everywhere (validated by the Phase 3 spike). The surface streams the signed URL itself; documents are never written to disk. Bridge: `/shared/pdfBridge.ts` |
 | PDF processing (server) | `pdf-lib` in Edge Functions                                                                                                                         | Page metadata extraction, image→PDF, flattening, certificate generation                                                                                                                                  |
@@ -229,7 +229,11 @@ server-side as soon as step 1's file is uploaded (title defaults to the file nam
 5. **Review & send** `[P5]`: email subject, message, expiration date (default 30 days), reminders
    (§11), require authentication (SHOULD, email OTP), allow signers to decline (default on).
    Buttons: Save draft · Send. Sending is blocked until every signer has at least one signature field
-   and every required field is assigned.
+   and every required field is assigned. The rules live in `/shared/send.ts` (the Review step lists
+   them; `send-document` enforces them and `send_document()` re-checks inside the transaction):
+   a file, ≥ 1 signer, every recipient has a valid unique email, every signer has a signature field,
+   only signers have fields. "Sign in this order" gives each acting recipient its own group; a CC
+   shares the previous group (CCs are notified at completion).
 
 ### 5.4 Document details `[P2 basic, P5–P7 full]` MUST
 
@@ -420,7 +424,8 @@ RPC so the client logic stays thin and the definitions live in one place.
 
 Recipients are invited by email. When a user with a **verified** email signs in, a security-definer
 function links any `document_recipients` rows with a matching email (case-insensitive) and
-`user_id IS NULL` to that user. RLS then grants in-app access. Until then they sign through the guest link.
+`user_id IS NULL` to that user. `send_document()` also links recipients who already have a verified
+account at send time. RLS then grants in-app access. Until then they sign through the guest link.
 
 ---
 

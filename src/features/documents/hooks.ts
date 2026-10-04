@@ -48,8 +48,12 @@ export function useDocument(id: string) {
   return useQuery({ queryKey: queryKeys.documents.detail(id), queryFn: () => getDocument(id) });
 }
 
-export function useRecipients(id: string) {
-  return useQuery({ queryKey: queryKeys.documents.recipients(id), queryFn: () => getRecipients(id) });
+export function useRecipients(id: string, options: { refetchOnMount?: boolean | 'always' } = {}) {
+  return useQuery({
+    queryKey: queryKeys.documents.recipients(id),
+    queryFn: () => getRecipients(id),
+    ...options,
+  });
 }
 
 export function useSearch(query: string) {

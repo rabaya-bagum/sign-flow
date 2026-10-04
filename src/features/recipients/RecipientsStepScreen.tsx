@@ -162,6 +162,7 @@ function RecipientsForm({ documentId, saved }: { documentId: string; saved: Save
           onValueChange={setSequential}
           accessibilityLabel={t('recipients.sequential')}
           trackColor={{ true: theme.colors.primary, false: theme.colors.border }}
+          thumbColor="#FFFFFF"
           testID="recipients-sequential"
         />
       </Card>

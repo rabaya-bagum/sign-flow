@@ -37,8 +37,12 @@ export function ReviewScreen() {
   const { t } = useTranslation();
   const errorMessage = useAppErrorMessage();
   const document = useDocument(id);
-  const recipients = useRecipients(id);
-  const fields = useQuery({ queryKey: queryKeys.documents.fields(id), queryFn: () => fetchFields(id) });
+  const recipients = useRecipients(id, { refetchOnMount: 'always' });
+  const fields = useQuery({
+    queryKey: queryKeys.documents.fields(id),
+    queryFn: () => fetchFields(id),
+    refetchOnMount: 'always',
+  });
   const settings = useQuery({
     queryKey: ['documents', 'send-settings', id],
     queryFn: () => fetchSendSettings(id),

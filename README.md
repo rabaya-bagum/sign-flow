@@ -7,8 +7,8 @@ Cross-platform (iOS + Android) e-signature app built with Expo + Supabase.
   [`phase-2.md`](./prompts/phase-2.md), [`phase-3.md`](./prompts/phase-3.md))
 - [`docs/phase-reports/`](./docs/phase-reports): what each phase delivered, test results, open TODOs
 
-**Status:** Phase 4 (field editor) complete. Phase reports: [1](./docs/phase-reports/phase-1.md),
-[2](./docs/phase-reports/phase-2.md), [3](./docs/phase-reports/phase-3.md), [4](./docs/phase-reports/phase-4.md).
+**Status:** Phase 5 (recipients & send) complete. Phase reports: [1](./docs/phase-reports/phase-1.md),
+[2](./docs/phase-reports/phase-2.md), [3](./docs/phase-reports/phase-3.md), [4](./docs/phase-reports/phase-4.md), [5](./docs/phase-reports/phase-5.md).
 
 ## Stack
 
@@ -113,6 +113,7 @@ via `signflow://auth/callback`.
 | `npm run test:golden`                 | Golden raster test: shapes stamped by `stamp.ts`, rendered by the surface, must land within ±1 pt                        |
 | `npm run check:dev-routes`            | Export production bundles (web, Android) and fail if any `/dev/*` screen code is included                                |
 | `node tests/e2e/editor-roundtrip.mjs` | Field editor E2E on the web build (port 8081; needs `functions:serve`): place, drag, reload, compare with the DB         |
+| `node tests/e2e/send-flow.mjs`        | Recipients → fields → review & send in the web build; checks the emails in Mailpit                                       |
 | `npm run functions:deploy`            | Deploy the production Edge Functions (explicit list; never `dev-stamp`)                                                  |
 
 After changing a migration: `npm run db:reset && npm run gen:types && npm run db:test`.
@@ -163,6 +164,14 @@ Buckets are created by migration (`20261003000900_storage.sql`) and are all priv
 
 Files over 6 MB upload through Storage's resumable (TUS) endpoint with progress, cancel and automatic
 resume (`src/features/upload/resumable.ts`).
+
+### Email
+
+`send-document` (and later notifications) sends through `supabase/functions/_shared/email`. In
+production set the function secrets `RESEND_API_KEY`, `EMAIL_FROM` (a verified Resend sender) and
+`PUBLIC_SIGNING_URL` (the web app origin serving `/s/<token>`). Locally, copy
+`supabase/functions/.env.example` to `supabase/functions/.env`: mail goes to the stack's Mailpit, readable
+at <http://127.0.0.1:54324>.
 
 ### Fonts and licences
 

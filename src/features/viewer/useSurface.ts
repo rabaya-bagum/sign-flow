@@ -75,5 +75,11 @@ function dispatch(event: SurfaceEvent, props: PdfSurfaceProps) {
     case 'error':
       props.onError?.({ code: event.code, message: event.message });
       break;
+    case 'overlayTap':
+      props.onOverlayTap?.(event.id);
+      break;
+    case 'overlayChanged':
+      props.onOverlayChanged?.({ id: event.id, page: event.page, rect: event.rect });
+      break;
   }
 }

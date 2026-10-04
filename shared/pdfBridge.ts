@@ -26,6 +26,13 @@ export const overlaySchema = z.object({
   src: z.string().startsWith('data:image/png;base64,').max(3_000_000).optional(),
   /** Accessible name. */
   label: z.string().max(200).optional(),
+  /** Short text shown inside a rect (e.g. "Signature"). */
+  text: z.string().max(60).optional(),
+  /** Field editor: the overlay can be tapped, dragged and (when highlighted) resized. */
+  editable: z.boolean().optional(),
+  /** Minimum size while resizing, in page fractions. */
+  minWidth: fraction.optional(),
+  minHeight: fraction.optional(),
 });
 
 export const pageGeometrySchema = z.object({
@@ -76,6 +83,16 @@ export const surfaceEventSchema = z.discriminatedUnion('type', [
   }),
   z.object({ v, type: z.literal('zoomChanged'), zoom: z.number().min(1).max(4) }),
   z.object({ v, type: z.literal('tap'), page: z.number().int().min(1), x: fraction, y: fraction }),
+  /** An editable overlay was tapped (select it). */
+  z.object({ v, type: z.literal('overlayTap'), id: z.string().min(1).max(100) }),
+  /** An editable overlay was moved or resized (sent when the gesture ends; already clamped). */
+  z.object({
+    v,
+    type: z.literal('overlayChanged'),
+    id: z.string().min(1).max(100),
+    page: z.number().int().min(1),
+    rect: fractionalRectSchema,
+  }),
   z.object({
     v,
     type: z.literal('error'),

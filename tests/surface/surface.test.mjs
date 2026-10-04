@@ -140,3 +140,84 @@ test('preview mode is static: no scrolling and no taps', () =>
     );
     assert.equal(taps, 0);
   }));
+
+test('editable overlays: tap selects, drag moves, corner handles resize (clamped, min size)', () =>
+  withSurface(async ({ page, frame }) => {
+    await loadPdf(page, `${origin}/fixtures/pdf/portrait-3p.pdf`);
+    const overlay = {
+      id: 'f1',
+      page: 1,
+      kind: 'rect',
+      rect: { x: 0.2, y: 0.2, width: 0.3, height: 0.1 },
+      editable: true,
+      text: 'Signature',
+      minWidth: 0.1,
+      minHeight: 0.03,
+      color: '#2B59D9',
+    };
+    await page.evaluate((o) => window.send({ type: 'setOverlays', overlays: [o] }), overlay);
+    const el = frame.locator('[data-overlay-id="f1"]');
+    await el.waitFor();
+    const pageBox = await frame.locator('.page[data-page="1"]').boundingBox();
+
+    let before = await page.evaluate(() => window.events.length);
+    await el.click();
+    const tap = await page.evaluate((after) => window.waitFor('overlayTap', after), before);
+    assert.equal(tap.id, 'f1');
+    const plainTaps = await page.evaluate(
+      (after) => window.events.slice(after).filter((e) => e.type === 'tap').length,
+      before,
+    );
+    assert.equal(plainTaps, 0, 'tapping a field does not also tap the page');
+
+    // Drag by +10% / +5% of the page.
+    const box = await el.boundingBox();
+    before = await page.evaluate(() => window.events.length);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(
+      box.x + box.width / 2 + pageBox.width * 0.1,
+      box.y + box.height / 2 + pageBox.height * 0.05,
+      { steps: 8 },
+    );
+    await page.mouse.up();
+    const moved = await page.evaluate((after) => window.waitFor('overlayChanged', after), before);
+    assert.ok(
+      Math.abs(moved.rect.x - 0.3) < 0.005 && Math.abs(moved.rect.y - 0.25) < 0.005,
+      JSON.stringify(moved.rect),
+    );
+    assert.equal(moved.rect.width, 0.3);
+
+    // Select it (handles appear), then drag the SE handle far up-left: stops at the minimum size.
+    await page.evaluate(
+      (o) => {
+        window.send({ type: 'setOverlays', overlays: [o] });
+        window.send({ type: 'highlight', id: 'f1' });
+      },
+      { ...overlay, rect: moved.rect },
+    );
+    const handle = frame.locator('[data-overlay-id="f1"] .handle.se');
+    await handle.waitFor();
+    const h = await handle.boundingBox();
+    before = await page.evaluate(() => window.events.length);
+    await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(h.x - 500, h.y - 500, { steps: 8 });
+    await page.mouse.up();
+    const resized = await page.evaluate((after) => window.waitFor('overlayChanged', after), before);
+    assert.ok(
+      Math.abs(resized.rect.width - 0.1) < 1e-6 && Math.abs(resized.rect.height - 0.03) < 1e-6,
+      JSON.stringify(resized.rect),
+    );
+    assert.ok(Math.abs(resized.rect.x - moved.rect.x) < 1e-9, 'the opposite corner stays put');
+
+    // Dragging past the page edge snaps to the edge.
+    const b2 = await el.boundingBox();
+    before = await page.evaluate(() => window.events.length);
+    await page.mouse.move(b2.x + b2.width / 2, b2.y + b2.height / 2); // the middle, not a corner handle
+    await page.mouse.down();
+    await page.mouse.move(b2.x + 2000, b2.y + b2.height / 2, { steps: 8 });
+    await page.mouse.up();
+    const edge = await page.evaluate((after) => window.waitFor('overlayChanged', after), before);
+    assert.ok(Math.abs(edge.rect.x + edge.rect.width - 1) < 1e-9, JSON.stringify(edge.rect));
+  }));

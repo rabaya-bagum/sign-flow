@@ -1,5 +1,6 @@
 import type { StyleProp, ViewStyle } from 'react-native';
 
+import type { FractionalRect } from '@shared/geometry';
 import type { PageGeometry, SurfaceOverlay } from '@shared/pdfBridge';
 
 export interface PdfSurfaceError {
@@ -20,6 +21,10 @@ export interface PdfSurfaceProps {
   /** Tap on a page, in displayed page fractions (top-left origin, SPEC §8.1). */
   onTap?: (tap: { page: number; x: number; y: number }) => void;
   onError?: (error: PdfSurfaceError) => void;
+  /** Field editor: an editable overlay was tapped. */
+  onOverlayTap?: (id: string) => void;
+  /** Field editor: an editable overlay was moved or resized (fractions, already clamped). */
+  onOverlayChanged?: (change: { id: string; page: number; rect: FractionalRect }) => void;
   style?: StyleProp<ViewStyle>;
   testID?: string;
 }

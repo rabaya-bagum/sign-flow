@@ -19,6 +19,12 @@ import {
   type SurfaceOverlay,
 } from '../../../shared/pdfBridge';
 
+import {
+  moveFractionRect,
+  resizeFractionRect,
+  type Corner,
+  type FractionalRect,
+} from '../../../shared/geometry';
 import { emit, listen } from './transport';
 
 declare const __PDF_WORKER_SRC__: string;
@@ -204,24 +210,99 @@ function drawOverlays(): void {
     const p = pages[o.page - 1];
     if (!p) continue;
     const el = document.createElement(o.kind === 'image' ? 'img' : 'div');
-    el.className = `overlay${o.id === highlighted ? ' highlighted' : ''}`;
+    const selected = o.id === highlighted;
+    el.className = `overlay${selected ? ' highlighted' : ''}${o.editable ? ' editable' : ''}`;
     el.dataset.overlayId = o.id;
-    Object.assign(el.style, {
-      left: `${o.rect.x * 100}%`,
-      top: `${o.rect.y * 100}%`,
-      width: `${o.rect.width * 100}%`,
-      height: `${o.rect.height * 100}%`,
-    });
+    placeOverlay(el, o.rect);
     if (o.kind === 'image' && o.src && el instanceof HTMLImageElement) {
       el.src = o.src;
       el.alt = o.label ?? '';
     } else {
       el.style.borderColor = o.color ?? '#2B59D9';
+      el.style.color = o.color ?? '#2B59D9';
       el.style.background = o.fill ?? 'transparent';
       if (o.label) el.setAttribute('aria-label', o.label);
+      if (o.text) {
+        const text = document.createElement('span');
+        text.className = 'text';
+        text.textContent = o.text;
+        el.appendChild(text);
+      }
+    }
+    if (o.editable) {
+      el.setAttribute('role', 'button');
+      el.addEventListener('pointerdown', (e) => startEdit(e as PointerEvent, o, p, el, 'move'));
+      if (selected) {
+        for (const corner of ['nw', 'ne', 'sw', 'se'] as const) {
+          const handle = document.createElement('div');
+          handle.className = `handle ${corner}`;
+          handle.addEventListener('pointerdown', (e) => startEdit(e, o, p, el, corner));
+          el.appendChild(handle);
+        }
+      }
     }
     p.overlayLayer.appendChild(el);
   }
+}
+
+function placeOverlay(el: HTMLElement, rect: FractionalRect): void {
+  Object.assign(el.style, {
+    left: `${rect.x * 100}%`,
+    top: `${rect.y * 100}%`,
+    width: `${rect.width * 100}%`,
+    height: `${rect.height * 100}%`,
+  });
+}
+
+/**
+ * Drag to move (on the overlay) or resize (on a corner handle). The rect is updated live and reported
+ * once, on release, as `overlayChanged`; a release without movement is an `overlayTap`.
+ */
+function startEdit(
+  e: PointerEvent,
+  o: SurfaceOverlay,
+  p: PageState,
+  el: HTMLElement,
+  mode: 'move' | Corner,
+): void {
+  if (pinch || e.button > 0) return;
+  e.stopPropagation();
+  e.preventDefault();
+  const target = e.currentTarget as HTMLElement;
+  target.setPointerCapture(e.pointerId);
+  const box = p.el.getBoundingClientRect();
+  const start = { x: e.clientX, y: e.clientY };
+  const min = { width: o.minWidth ?? 0.01, height: o.minHeight ?? 0.01 };
+  let rect = o.rect;
+  let moved = false;
+
+  const onMove = (ev: PointerEvent) => {
+    if (ev.pointerId !== e.pointerId) return;
+    const dxPx = ev.clientX - start.x;
+    const dyPx = ev.clientY - start.y;
+    if (!moved && Math.hypot(dxPx, dyPx) < TAP_SLOP_PX) return;
+    moved = true;
+    const dx = dxPx / box.width;
+    const dy = dyPx / box.height;
+    rect = mode === 'move' ? moveFractionRect(o.rect, dx, dy) : resizeFractionRect(o.rect, mode, dx, dy, min);
+    placeOverlay(el, rect);
+  };
+  const onUp = (ev: PointerEvent) => {
+    if (ev.pointerId !== e.pointerId) return;
+    ev.stopPropagation();
+    target.removeEventListener('pointermove', onMove);
+    target.removeEventListener('pointerup', onUp);
+    target.removeEventListener('pointercancel', onUp);
+    if (!moved) {
+      emit({ v: BRIDGE_VERSION, type: 'overlayTap', id: o.id });
+      return;
+    }
+    o.rect = rect;
+    emit({ v: BRIDGE_VERSION, type: 'overlayChanged', id: o.id, page: o.page, rect });
+  };
+  target.addEventListener('pointermove', onMove);
+  target.addEventListener('pointerup', onUp);
+  target.addEventListener('pointercancel', onUp);
 }
 
 // --- Navigation --------------------------------------------------------------------------------------

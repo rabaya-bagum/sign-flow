@@ -32,7 +32,7 @@ export interface DocumentListParams {
 
 export interface Participant {
   name: string;
-  email: string;
+  email: string | null;
 }
 
 export interface DocumentListItem {
@@ -82,7 +82,8 @@ export interface DocumentDetail {
 export interface Recipient {
   id: string;
   name: string;
-  email: string;
+  /** Null for a draft's placeholder recipient (no email yet). */
+  email: string | null;
   role: 'signer' | 'approver' | 'viewer' | 'cc';
   signingOrder: number;
   status: 'pending' | 'sent' | 'viewed' | 'signed' | 'approved' | 'declined';

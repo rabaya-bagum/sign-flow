@@ -158,3 +158,48 @@ export function fitAspect(page: PageBox, rect: FractionalRect, aspect: number): 
   const height = fittedH / page.height_pt;
   return { x: rect.x + (rect.width - width) / 2, y: rect.y + (rect.height - height) / 2, width, height };
 }
+
+// --- Editing (field editor, Phase 4) -------------------------------------------------------------
+
+export type Corner = 'nw' | 'ne' | 'sw' | 'se';
+
+/** Moves a rect by (dx, dy) page fractions, snapping it to the page bounds. */
+export function moveFractionRect(rect: FractionalRect, dx: number, dy: number): FractionalRect {
+  return clampFractionRect({ ...rect, x: rect.x + dx, y: rect.y + dy });
+}
+
+/**
+ * Drags one corner by (dx, dy) page fractions. The opposite corner stays put; the rect never shrinks
+ * below `min` (fractions) and never leaves the page.
+ */
+export function resizeFractionRect(
+  rect: FractionalRect,
+  corner: Corner,
+  dx: number,
+  dy: number,
+  min: { width: number; height: number },
+): FractionalRect {
+  const right = rect.x + rect.width;
+  const bottom = rect.y + rect.height;
+  let x0 = rect.x;
+  let y0 = rect.y;
+  let x1 = right;
+  let y1 = bottom;
+  if (corner === 'nw' || corner === 'sw') x0 = Math.min(Math.max(0, rect.x + dx), right - min.width);
+  else x1 = Math.max(Math.min(1, right + dx), rect.x + min.width);
+  if (corner === 'nw' || corner === 'ne') y0 = Math.min(Math.max(0, rect.y + dy), bottom - min.height);
+  else y1 = Math.max(Math.min(1, bottom + dy), rect.y + min.height);
+  return clampFractionRect({ x: x0, y: y0, width: x1 - x0, height: y1 - y0 });
+}
+
+/** A rect of `widthPt` × `heightPt` displayed points centred on a fractional point, kept on the page. */
+export function rectAround(
+  page: { width_pt: number; height_pt: number },
+  center: FractionalPoint,
+  widthPt: number,
+  heightPt: number,
+): FractionalRect {
+  const width = Math.min(1, widthPt / page.width_pt);
+  const height = Math.min(1, heightPt / page.height_pt);
+  return clampFractionRect({ x: center.x - width / 2, y: center.y - height / 2, width, height });
+}

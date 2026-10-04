@@ -117,3 +117,56 @@ describe('helpers', () => {
     expect(fitted.x + fitted.width / 2).toBeCloseTo(0.35, 6);
   });
 });
+
+describe('editing helpers', () => {
+  const { moveFractionRect, resizeFractionRect, rectAround } =
+    jest.requireActual<typeof import('../geometry')>('../geometry');
+  const r = { x: 0.2, y: 0.2, width: 0.3, height: 0.1 };
+  const min = { width: 0.05, height: 0.02 };
+
+  it('moves and snaps to page bounds', () => {
+    expect(moveFractionRect(r, 0.1, 0.05)).toEqual({
+      x: 0.30000000000000004,
+      y: 0.25,
+      width: 0.3,
+      height: 0.1,
+    });
+    expect(moveFractionRect(r, 2, -2)).toEqual({ x: 0.7, y: 0, width: 0.3, height: 0.1 });
+  });
+
+  it('resizes from each corner, keeping the opposite corner fixed', () => {
+    const se = resizeFractionRect(r, 'se', 0.1, 0.1, min);
+    expect(se.x).toBe(0.2);
+    expect(se.width).toBeCloseTo(0.4);
+    expect(se.height).toBeCloseTo(0.2);
+    const nw = resizeFractionRect(r, 'nw', -0.1, -0.1, min);
+    expect(nw.x).toBeCloseTo(0.1);
+    expect(nw.x + nw.width).toBeCloseTo(0.5);
+    expect(nw.y + nw.height).toBeCloseTo(0.3);
+  });
+
+  it('enforces the minimum size and the page edges', () => {
+    const tiny = resizeFractionRect(r, 'se', -1, -1, min);
+    expect(tiny.width).toBeCloseTo(0.05);
+    expect(tiny.height).toBeCloseTo(0.02);
+    const big = resizeFractionRect(r, 'ne', 5, -5, min);
+    expect(big.x + big.width).toBeCloseTo(1);
+    expect(big.y).toBe(0);
+  });
+
+  it('centres a new field on the tap, inside the page', () => {
+    const page = { width_pt: 600, height_pt: 800 };
+    expect(rectAround(page, { x: 0.5, y: 0.5 }, 150, 40)).toEqual({
+      x: 0.375,
+      y: 0.475,
+      width: 0.25,
+      height: 0.05,
+    });
+    expect(rectAround(page, { x: 0.99, y: 0.01 }, 150, 40)).toEqual({
+      x: 0.75,
+      y: 0,
+      width: 0.25,
+      height: 0.05,
+    });
+  });
+});

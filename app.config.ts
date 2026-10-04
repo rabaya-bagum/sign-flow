@@ -10,7 +10,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: 'signflow',
   version: '0.1.0',
   scheme: 'signflow',
-  orientation: 'portrait',
+  // Portrait everywhere (locked at launch and in src/hooks/useOrientation.ts); the signature pad also
+  // allows landscape on phones (SPEC §5.7), so the native config must permit every orientation.
+  orientation: 'default',
   icon: './assets/icon.png',
   userInterfaceStyle: 'automatic',
   ios: {
@@ -38,6 +40,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-apple-authentication',
     'expo-web-browser',
     'expo-font',
+    ['expo-screen-orientation', { initialOrientation: 'PORTRAIT_UP' }],
     [
       'expo-image-picker',
       {

@@ -5,11 +5,10 @@ import {
   FilterMode,
   ImageFormat,
   MipmapMode,
-  PaintStyle,
+  FillType,
   Skia,
-  StrokeCap,
-  StrokeJoin,
   type SkImage,
+  type SkPath,
   type SkTypeface,
 } from '@shopify/react-native-skia';
 
@@ -22,7 +21,7 @@ import {
   OUTPUT_MIN_LONG_EDGE,
   outputSize,
   padBounds,
-  segmentWidths,
+  strokeShapes,
   type Point,
 } from './pixels';
 
@@ -37,9 +36,7 @@ export interface SignaturePng {
   height: number;
 }
 
-/** Ink colours offered when drawing or typing. Black is the default. */
-export const INK_COLORS = { black: '#111111', blue: '#1A3A8F' } as const;
-export type InkColor = keyof typeof INK_COLORS;
+export { INK_COLORS, type InkColor } from './ink';
 
 function rgbaInfo(width: number, height: number) {
   return { width, height, colorType: ColorType.RGBA_8888, alphaType: AlphaType.Unpremul };
@@ -70,6 +67,16 @@ export function imageFromRgba(rgba: Uint8Array, width: number, height: number): 
   return image;
 }
 
+/** One filled path per stroke (see strokeShapes); shared by the live canvas and the export. */
+export function strokePath(stroke: Point[], baseWidth: number): SkPath {
+  const { dabs, quads } = strokeShapes(stroke, baseWidth);
+  const path = Skia.Path.Make();
+  path.setFillType(FillType.Winding);
+  for (const d of dabs) path.addOval(Skia.XYWHRect(d.x - d.r, d.y - d.r, d.r * 2, d.r * 2), false);
+  for (const q of quads) path.addPoly(q, true);
+  return path;
+}
+
 /** Rasterizes strokes drawn on a canvas of `width` × `height` points at `scale` px per point. */
 export function rasterizeStrokes(
   strokes: Point[][],
@@ -84,25 +91,7 @@ export function rasterizeStrokes(
   const paint = Skia.Paint();
   paint.setAntiAlias(true);
   paint.setColor(Skia.Color(color));
-  paint.setStyle(PaintStyle.Stroke);
-  paint.setStrokeCap(StrokeCap.Round);
-  paint.setStrokeJoin(StrokeJoin.Round);
-  for (const stroke of strokes) {
-    if (stroke.length === 1) {
-      const dot = Skia.Paint();
-      dot.setAntiAlias(true);
-      dot.setColor(Skia.Color(color));
-      canvas.drawCircle(stroke[0]!.x, stroke[0]!.y, baseWidth / 2, dot);
-      continue;
-    }
-    const widths = segmentWidths(stroke, baseWidth);
-    for (let i = 1; i < stroke.length; i++) {
-      const a = stroke[i - 1]!;
-      const b = stroke[i]!;
-      paint.setStrokeWidth(widths[i - 1]!);
-      canvas.drawLine(a.x, a.y, b.x, b.y, paint);
-    }
-  }
+  for (const stroke of strokes) canvas.drawPath(strokePath(stroke, baseWidth), paint);
   return snapshot(surface);
 }
 

@@ -12,7 +12,7 @@ import { resumableUpload, ResumableUploadError, UploadAbortedError } from './res
 export type UploadOutcome = 'uploaded' | 'already-exists';
 
 export interface StorageUploadOptions {
-  bucket: 'documents' | 'uploads-tmp' | 'avatars';
+  bucket: 'documents' | 'uploads-tmp' | 'avatars' | 'signatures';
   path: string;
   contentType: string;
   source: ChunkSource;

@@ -188,3 +188,58 @@ export function initialsFromName(name: string): string {
   const last = words.length > 1 ? (Array.from(words[words.length - 1]!)[0] ?? '') : '';
   return (first + last).toLocaleUpperCase();
 }
+
+export interface StrokeShapes {
+  /** Round dabs at each sample: x, y, radius. */
+  dabs: { x: number; y: number; r: number }[];
+  /** Quads joining consecutive dabs, all wound clockwise (y-down) so a winding fill never cancels. */
+  quads: { x: number; y: number }[][];
+}
+
+/**
+ * Geometry for one variable-width stroke, filled as a single path: a dab per sample plus the quad
+ * between neighbouring dabs. The live canvas and the exported PNG both use this.
+ */
+export function strokeShapes(stroke: Point[], baseWidth: number): StrokeShapes {
+  if (stroke.length === 0) return { dabs: [], quads: [] };
+  const widths = segmentWidths(stroke, baseWidth);
+  const radius = (i: number) => (i === 0 ? (widths[0] ?? baseWidth) : widths[i - 1]!) / 2;
+  const dabs = stroke.map((p, i) => ({ x: p.x, y: p.y, r: radius(i) }));
+  const quads: { x: number; y: number }[][] = [];
+  for (let i = 1; i < stroke.length; i++) {
+    const a = dabs[i - 1]!;
+    const b = dabs[i]!;
+    const length = Math.hypot(b.x - a.x, b.y - a.y);
+    if (length === 0) continue;
+    const nx = -(b.y - a.y) / length;
+    const ny = (b.x - a.x) / length;
+    const quad = [
+      { x: a.x + nx * a.r, y: a.y + ny * a.r },
+      { x: b.x + nx * b.r, y: b.y + ny * b.r },
+      { x: b.x - nx * b.r, y: b.y - ny * b.r },
+      { x: a.x - nx * a.r, y: a.y - ny * a.r },
+    ];
+    if (signedArea(quad) < 0) quad.reverse();
+    quads.push(quad);
+  }
+  return { dabs, quads };
+}
+
+/** Shoelace area; positive means clockwise on a y-down canvas. */
+export function signedArea(points: { x: number; y: number }[]): number {
+  let area = 0;
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i]!;
+    const q = points[(i + 1) % points.length]!;
+    area += p.x * q.y - q.x * p.y;
+  }
+  return area / 2;
+}
+
+/** Width and height from a PNG's IHDR chunk, or null if the bytes are not a PNG. */
+export function pngSize(bytes: Uint8Array): { width: number; height: number } | null {
+  const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  if (bytes.length < 24 || signature.some((b, i) => bytes[i] !== b)) return null;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return { width: view.getUint32(16), height: view.getUint32(20) };
+}

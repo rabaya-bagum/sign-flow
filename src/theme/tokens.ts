@@ -19,6 +19,10 @@ export const palette = {
     warning: '#9E5F00',
     danger: '#C93A3A',
     fieldHighlight: '#FFF4D6',
+    // Signature pad: light "paper" in both themes so ink colours stay true (SPEC §5.7).
+    paper: '#FFFFFF',
+    paperLine: '#AEB4BE',
+    paperText: '#5B6270',
   },
   dark: {
     background: '#0E1013',
@@ -36,6 +40,10 @@ export const palette = {
     warning: '#E3A23B',
     danger: '#F06A6A',
     fieldHighlight: '#3A3016',
+    // Signature pad: light "paper" in both themes so ink colours stay true (SPEC §5.7).
+    paper: '#FFFFFF',
+    paperLine: '#AEB4BE',
+    paperText: '#5B6270',
   },
 } as const;
 

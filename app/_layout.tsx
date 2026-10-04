@@ -9,12 +9,14 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/features/auth/AuthProvider';
+import { lockPortrait } from '@/hooks/useOrientation';
 import { useAuthStore } from '@/features/auth/store';
 import { queryClient } from '@/lib/queryClient';
 import { usePreferencesStore } from '@/store/preferences';
 import { ThemeProvider, useTheme } from '@/theme';
 
 void SplashScreen.preventAutoHideAsync();
+lockPortrait();
 
 export default function RootLayout() {
   return (

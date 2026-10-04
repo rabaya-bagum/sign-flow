@@ -57,6 +57,35 @@ describe('signature rendering (CanvasKit)', () => {
     expect(png.width - (ink.x + ink.width)).toBeLessThan(pad * 1.6);
   });
 
+  it('fills strokes solidly, with no holes where dabs and joins overlap (winding fill)', () => {
+    // Zigzag in both directions, fast and slow, so quads have every orientation.
+    const zigzag: Point[] = Array.from({ length: 24 }, (_, i) => ({
+      x: 20 + i * 12,
+      y: i % 2 ? 30 : 80,
+      t: i * (i % 3 ? 10 : 60),
+    }));
+    const scale = 2;
+    const image = rasterizeStrokes([zigzag, [...zigzag].reverse()], 330, 110, INK_COLORS.black, {
+      scale,
+      baseWidth: 4,
+    });
+    const rgba = readRgba(image);
+    const width = image.width();
+    for (let i = 1; i < zigzag.length; i++) {
+      // 0.02 and 0.98 sit inside both a dab and a quad: a winding mismatch would leave holes there.
+      for (const f of [0.02, 0.25, 0.5, 0.75, 0.98]) {
+        const x = Math.round((zigzag[i - 1]!.x + (zigzag[i]!.x - zigzag[i - 1]!.x) * f) * scale);
+        const y = Math.round((zigzag[i - 1]!.y + (zigzag[i]!.y - zigzag[i - 1]!.y) * f) * scale);
+        expect(rgba[(y * width + x) * 4 + 3]).toBeGreaterThan(200);
+      }
+    }
+  });
+
+  it('draws a single tap as a dot', () => {
+    const png = finalizeSignature(rasterizeStrokes([[{ x: 50, y: 50, t: 0 }]], 330, 110, INK_COLORS.black));
+    expect(png.width).toBe(png.height);
+  });
+
   it('keeps the ink colour', () => {
     const png = finalizeSignature(
       rasterizeStrokes([wave(330, 110)], 330, 110, INK_COLORS.blue, { baseWidth: 6 }),

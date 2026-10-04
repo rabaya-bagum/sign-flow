@@ -15,6 +15,8 @@ jest.mock('@/lib/supabase', () => ({
   },
 }));
 jest.mock('../api', () => ({ linkRecipientsToUser: () => mockLink() }));
+const mockClearLocal = jest.fn();
+jest.mock('../localData', () => ({ clearLocalUserData: () => mockClearLocal() }));
 jest.mock('@/lib/queryClient', () => ({ queryClient: { clear: jest.fn(), invalidateQueries: jest.fn() } }));
 
 // eslint-disable-next-line import/first
@@ -29,6 +31,7 @@ const session = (id: string) => ({ user: { id } });
 beforeEach(() => {
   jest.useFakeTimers();
   mockLink.mockReset().mockResolvedValue(0);
+  mockClearLocal.mockReset().mockResolvedValue(undefined);
   useAuthStore.setState({ status: 'loading', session: null, recovering: false });
 });
 
@@ -73,5 +76,16 @@ describe('AuthProvider', () => {
     await emit('SIGNED_OUT', null);
     await emit('SIGNED_IN', session('u2'));
     expect(mockLink).toHaveBeenCalledTimes(2);
+  });
+
+  it('clears device-local files on sign-out and when the account changes, not on refresh', async () => {
+    await render(<AuthProvider>{null}</AuthProvider>);
+    await emit('INITIAL_SESSION', session('u1'));
+    await emit('TOKEN_REFRESHED', session('u1'));
+    expect(mockClearLocal).not.toHaveBeenCalled();
+    await emit('SIGNED_IN', session('u2')); // switched account without a sign-out event
+    expect(mockClearLocal).toHaveBeenCalledTimes(1);
+    await emit('SIGNED_OUT', null);
+    expect(mockClearLocal).toHaveBeenCalledTimes(2);
   });
 });

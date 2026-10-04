@@ -11,6 +11,11 @@ export const queryKeys = {
   search: (query: string) => ['search', query] as const,
   storageUsage: () => ['storage-usage'] as const,
   avatarUrl: (path: string) => ['avatar-url', path] as const,
+  signatures: {
+    all: ['signatures'] as const,
+    list: () => ['signatures', 'list'] as const,
+    imageUrl: (path: string) => ['signatures', 'image-url', path] as const,
+  },
   dashboard: {
     all: ['dashboard'] as const,
     summary: () => ['dashboard', 'summary'] as const,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 
 import type { Field } from '@shared/fields';
 
@@ -10,12 +11,15 @@ export const AUTOSAVE_DELAY_MS = 800;
 
 /**
  * Debounced autosave of the field set (SPEC §5.6). Saves `AUTOSAVE_DELAY_MS` after the last change;
- * `flush()` saves immediately (Save button, leaving the editor). Saves never overlap.
+ * `flush()` saves immediately (Save/Next, leaving the editor). Saves never overlap. The status reads
+ * "saving" from the moment there are unsaved changes, so "saved" always means everything is stored.
  */
 export function useAutosave(documentId: string, fields: Field[], revision: number, enabled: boolean) {
-  const [status, setStatus] = useState<SaveStatus>('idle');
+  const [savedRevision, setSavedRevision] = useState(0);
+  const [failed, setFailed] = useState(false);
+  const [touched, setTouched] = useState(false);
   const latest = useRef({ fields, revision });
-  const savedRevision = useRef(0);
+  const savedRef = useRef(0);
   const inFlight = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
@@ -25,8 +29,8 @@ export function useAutosave(documentId: string, fields: Field[], revision: numbe
   const save = useCallback(async (): Promise<boolean> => {
     if (inFlight.current) await inFlight.current;
     const { fields: snapshot, revision: target } = latest.current;
-    if (target === savedRevision.current) return true;
-    setStatus('saving');
+    if (target === savedRef.current) return true;
+    setTouched(true);
     const attempt = saveFields(documentId, snapshot);
     inFlight.current = attempt.then(
       () => undefined,
@@ -34,11 +38,12 @@ export function useAutosave(documentId: string, fields: Field[], revision: numbe
     );
     try {
       await attempt;
-      savedRevision.current = target;
-      setStatus(latest.current.revision === target ? 'saved' : 'saving');
+      savedRef.current = target;
+      setSavedRevision(target);
+      setFailed(false);
       return true;
     } catch {
-      setStatus('error');
+      setFailed(true);
       return false;
     } finally {
       inFlight.current = null;
@@ -46,15 +51,30 @@ export function useAutosave(documentId: string, fields: Field[], revision: numbe
   }, [documentId]);
 
   useEffect(() => {
-    if (!enabled || revision === savedRevision.current) return;
+    if (!enabled || revision === savedRef.current) return;
     const timer = setTimeout(() => void save(), AUTOSAVE_DELAY_MS);
     return () => clearTimeout(timer);
   }, [enabled, revision, save]);
 
-  /** Marks the loaded state as saved (nothing to write until the first edit). */
+  const dirty = enabled && revision !== savedRevision;
+
+  // Web: warn before closing or reloading the tab with unsaved changes.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !dirty) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      void save();
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty, save]);
+
+  /** Marks a revision as already stored (e.g. after a server-side cascade). */
   const markLoaded = useCallback((loadedRevision: number) => {
-    savedRevision.current = loadedRevision;
+    savedRef.current = loadedRevision;
+    setSavedRevision(loadedRevision);
   }, []);
 
+  const status: SaveStatus = failed && dirty ? 'error' : dirty ? 'saving' : touched ? 'saved' : 'idle';
   return { status, flush: save, markLoaded };
 }

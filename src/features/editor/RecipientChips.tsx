@@ -21,6 +21,8 @@ export function RecipientChips({ recipients, activeId, onSelect, onEdit, onAdd }
   return (
     <ScrollView
       horizontal
+      // A horizontal ScrollView would otherwise grow to fill the column (web).
+      style={{ flexGrow: 0 }}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={[styles.row, { paddingHorizontal: theme.spacing.md, gap: theme.spacing.xs }]}
       accessibilityLabel={t('editor.recipientsLabel')}

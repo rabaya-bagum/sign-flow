@@ -213,20 +213,6 @@ export function FieldEditorScreen() {
           headerRight: () =>
             editable ? (
               <View style={styles.headerRight}>
-                <IconButton
-                  icon="arrow-undo"
-                  accessibilityLabel={t('editor.undo')}
-                  onPress={() => dispatch({ type: 'undo' })}
-                  color={state.past.length ? 'primary' : 'textTertiary'}
-                  testID="editor-undo"
-                />
-                <IconButton
-                  icon="arrow-redo"
-                  accessibilityLabel={t('editor.redo')}
-                  onPress={() => dispatch({ type: 'redo' })}
-                  color={state.future.length ? 'primary' : 'textTertiary'}
-                  testID="editor-redo"
-                />
                 <AppButton
                   title={t('editor.next')}
                   variant="ghost"
@@ -271,13 +257,29 @@ export function FieldEditorScreen() {
                 : ''}
         </AppText>
         {editable ? (
-          <AppText
-            variant="caption"
-            color={autosave.status === 'error' ? 'danger' : 'textTertiary'}
-            testID="editor-save-status"
-          >
-            {statusText}
-          </AppText>
+          <>
+            <AppText
+              variant="caption"
+              color={autosave.status === 'error' ? 'danger' : 'textTertiary'}
+              testID="editor-save-status"
+            >
+              {statusText}
+            </AppText>
+            <IconButton
+              icon="arrow-undo"
+              accessibilityLabel={t('editor.undo')}
+              onPress={() => dispatch({ type: 'undo' })}
+              color={state.past.length ? 'primary' : 'textTertiary'}
+              testID="editor-undo"
+            />
+            <IconButton
+              icon="arrow-redo"
+              accessibilityLabel={t('editor.redo')}
+              onPress={() => dispatch({ type: 'redo' })}
+              color={state.future.length ? 'primary' : 'textTertiary'}
+              testID="editor-redo"
+            />
+          </>
         ) : null}
       </View>
 

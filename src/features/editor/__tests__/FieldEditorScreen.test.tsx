@@ -93,6 +93,7 @@ describe('FieldEditorScreen', () => {
     expect(screen.getByText('Tap the page to place a Signature field for Aaliyah.')).toBeOnTheScreen();
     await act(async () => mockSurface.props!.onTap!({ page: 1, x: 0.5, y: 0.5 }));
 
+    expect(screen.getByText('Saving…')).toBeOnTheScreen(); // unsaved changes are never shown as "Saved"
     const overlay = mockSurface.props!.overlays![0]!;
     // 150 × 42 pt centred on the tap, on a 600 × 800 pt page.
     expect(overlay).toMatchObject({ page: 1, editable: true, text: 'Signature', color: '#C2410C' });

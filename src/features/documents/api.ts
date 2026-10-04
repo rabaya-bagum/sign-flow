@@ -228,3 +228,21 @@ export async function listSenders(): Promise<{ id: string; fullName: string }[]>
   if (error) throw toAppError(error);
   return data.map((s) => ({ id: s.id, fullName: s.full_name }));
 }
+
+export interface RemindResult {
+  reminded: number;
+  skipped: string[];
+}
+
+/** Remind one recipient, or everyone whose turn it is (SPEC §11: once per recipient per 24 h). */
+export function remindRecipients(documentId: string, recipientId?: string): Promise<RemindResult> {
+  return invokeFunction('remind', {
+    document_id: documentId,
+    ...(recipientId ? { recipient_id: recipientId } : {}),
+  });
+}
+
+/** Void with a reason (SPEC §6.2): terminal; links stop working; recipients are told. */
+export function voidDocument(documentId: string, reason: string): Promise<{ status: 'voided' }> {
+  return invokeFunction('void-document', { document_id: documentId, reason });
+}

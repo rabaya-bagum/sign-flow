@@ -31,6 +31,8 @@ export interface SignatureRequestEmail {
   link: string;
   expiresAt: string;
   role: 'signer' | 'approver' | 'viewer';
+  /** 'reminder' (SPEC §11) and 'expiring' (24 h before expiry) reuse the request with a new link. */
+  kind?: 'request' | 'reminder' | 'expiring';
 }
 
 const ACTION = {
@@ -41,20 +43,33 @@ const ACTION = {
 
 export function signatureRequestEmail(input: SignatureRequestEmail): EmailMessage {
   const action = ACTION[input.role];
-  const subject =
+  const kind = input.kind ?? 'request';
+  const base =
     input.subject?.trim() || `${input.senderName} sent you "${input.documentTitle}" to ${action.verb}`;
+  const subject =
+    kind === 'reminder'
+      ? `Reminder: ${base}`
+      : kind === 'expiring'
+        ? `Expires tomorrow: "${input.documentTitle}"`
+        : base;
+  const heading =
+    kind === 'reminder'
+      ? `Reminder: ${input.senderName} is waiting for you to ${action.verb}`
+      : kind === 'expiring'
+        ? `This document expires tomorrow`
+        : `${input.senderName} sent you a document to ${action.verb}`;
   const expires = new Date(input.expiresAt).toUTCString().replace(/ \d\d:\d\d:\d\d GMT$/, '');
   const message = input.message?.trim();
   const html = layout(
     subject,
-    `<h1 style="font-size:20px;margin:0 0 12px">${escape(input.senderName)} sent you a document to ${action.verb}</h1>
+    `<h1 style="font-size:20px;margin:0 0 12px">${escape(heading)}</h1>
 <p style="margin:0 0 8px"><strong>${escape(input.documentTitle)}</strong></p>
 ${message ? `<blockquote style="margin:16px 0;padding:12px 16px;background:#F7F8FA;border-left:3px solid #2B59D9;white-space:pre-wrap">${escape(message)}</blockquote>` : ''}
 ${button(input.link, action.button)}
 <p style="font-size:14px;color:#5B6270;margin:0">This link is personal to ${escape(input.recipientEmail)}. Don't forward it. It expires on ${escape(expires)}.</p>`,
   );
   const text = [
-    `${input.senderName} sent you a document to ${action.verb}: ${input.documentTitle}`,
+    `${heading}: ${input.documentTitle}`,
     message ? `\nMessage from ${input.senderName}:\n${message}\n` : '',
     `${action.button}: ${input.link}`,
     `\nThis link is personal to ${input.recipientEmail}. Don't forward it. It expires on ${expires}.`,
@@ -135,4 +150,32 @@ export function otpEmail(input: OtpEmail): EmailMessage {
   );
   const text = `Your SignFlow code for "${input.documentTitle}" is ${input.code}. It expires in 10 minutes.`;
   return { to: { email: input.recipientEmail, name: input.recipientName }, subject, html, text };
+}
+
+export interface SimpleNoticeEmail {
+  recipientName: string;
+  recipientEmail: string;
+  subject: string;
+  heading: string;
+  lines: string[];
+  link?: { href: string; label: string };
+}
+
+/** Plain notice (voided, expired, signed): heading, a few lines, an optional button. */
+export function noticeEmail(input: SimpleNoticeEmail): EmailMessage {
+  const html = layout(
+    input.subject,
+    `<h1 style="font-size:20px;margin:0 0 12px">${escape(input.heading)}</h1>
+${input.lines.map((l) => `<p style="margin:0 0 8px;white-space:pre-wrap">${escape(l)}</p>`).join('\n')}
+${input.link ? button(input.link.href, input.link.label) : ''}`,
+  );
+  const text = [input.heading, ...input.lines, input.link ? `${input.link.label}: ${input.link.href}` : '']
+    .filter(Boolean)
+    .join('\n\n');
+  return {
+    to: { email: input.recipientEmail, name: input.recipientName },
+    subject: input.subject,
+    html,
+    text,
+  };
 }

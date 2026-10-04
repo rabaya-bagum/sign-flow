@@ -1,10 +1,13 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { isAppError } from '@shared/errors';
 
 import {
+  ActionSheet,
   AppButton,
   AppText,
   Card,
@@ -17,17 +20,21 @@ import {
   SectionHeader,
   StatusBadge,
 } from '@/components';
+import { DocumentTimeline } from '@/features/activity/DocumentTimeline';
 import { useCurrentUserId } from '@/features/auth/store';
 import { useAppErrorMessage } from '@/hooks/useAppErrorMessage';
+import { queryKeys } from '@/lib/queryKeys';
 import { useTheme } from '@/theme';
 import { formatBytes } from '@/utils/formatBytes';
 
 import { availableActions, type ActionTarget } from './actions';
+import { remindRecipients, voidDocument } from './api';
 import { DocumentPreviewCard } from './DocumentPreviewCard';
 import { canSaveToDevice, shareDocument } from './download';
 import { useDocument, useMarkOpened, useRecipients } from './hooks';
 import type { Recipient } from './types';
 import { useDocumentActions } from './useDocumentActions';
+import { VoidSheet } from './VoidSheet';
 
 function useFormatDate() {
   const { i18n } = useTranslation();
@@ -39,10 +46,13 @@ function RecipientRow({
   recipient,
   isYou,
   separator,
+  onPress,
 }: {
   recipient: Recipient;
   isYou: boolean;
   separator: boolean;
+  /** Owner of a document in progress: opens the recipient's actions (Remind). */
+  onPress?: () => void;
 }) {
   const { t } = useTranslation();
   const formatDate = useFormatDate();
@@ -61,6 +71,9 @@ function RecipientRow({
         .join('\n')}
       value={status}
       separator={separator}
+      onPress={onPress}
+      chevron={Boolean(onPress)}
+      accessibilityHint={onPress ? t('lifecycle.remindHint') : undefined}
       testID={`recipient-${recipient.id}`}
     />
   );
@@ -76,6 +89,54 @@ export function DocumentDetailsScreen() {
   const document = useDocument(id);
   const recipients = useRecipients(id);
   useMarkOpened(id, document.isSuccess);
+  const queryClient = useQueryClient();
+  const [sheet, setSheet] = useState<{ kind: 'void' } | { kind: 'recipient'; recipient: Recipient } | null>(
+    null,
+  );
+  const [busy, setBusy] = useState(false);
+  const [lifecycleError, setLifecycleError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const refreshAll = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.documents.all }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.activity.all }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all }),
+    ]);
+  const runRemind = async (recipientId?: string) => {
+    setSheet(null);
+    setLifecycleError(null);
+    setNotice(null);
+    try {
+      const result = await remindRecipients(id, recipientId);
+      setNotice(
+        [
+          result.reminded === 1
+            ? t('lifecycle.reminded')
+            : t('lifecycle.remindedMany', { count: result.reminded }),
+          result.skipped.length ? t('lifecycle.remindSkipped') : null,
+        ]
+          .filter(Boolean)
+          .join(' '),
+      );
+      await refreshAll();
+    } catch (e) {
+      setLifecycleError(errorMessage(e));
+    }
+  };
+  const runVoid = async (reason: string) => {
+    setBusy(true);
+    setLifecycleError(null);
+    try {
+      await voidDocument(id, reason);
+      setSheet(null);
+      setNotice(t('lifecycle.voided'));
+      await refreshAll();
+    } catch (e) {
+      setLifecycleError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
   const actions = useDocumentActions({
     onDeleted: () => (router.canGoBack() ? router.back() : router.replace('/documents')),
   });
@@ -115,6 +176,9 @@ export function DocumentDetailsScreen() {
   };
   const keys = availableActions(target, { includeOpen: false, canSave: canSaveToDevice });
   const isDraftOwner = doc.status === 'draft' && doc.isOwner;
+  const canManage = doc.isOwner && doc.status === 'in_progress';
+  const remindable = (r: Recipient) =>
+    canManage && r.role !== 'cc' && (r.status === 'sent' || r.status === 'viewed');
   // The caller's own turn to sign or approve (SPEC §6.3 "Needs your signature").
   const myTurn =
     doc.status === 'in_progress'
@@ -148,7 +212,14 @@ export function DocumentDetailsScreen() {
       <Card style={styles.banner} testID="details-banner">
         <StatusBadge status={doc.displayStatus} />
         <AppText variant="callout">{t(`details.banner_${doc.displayStatus}`)}</AppText>
+        {doc.status === 'voided' && doc.voidReason ? (
+          <AppText variant="footnote" color="textSecondary">
+            {t('details.voidedBanner', { reason: doc.voidReason })}
+          </AppText>
+        ) : null}
       </Card>
+      {notice ? <InlineAlert tone="success" message={notice} testID="details-notice" /> : null}
+      {lifecycleError && !sheet ? <InlineAlert message={lifecycleError} testID="details-error" /> : null}
 
       {doc.hidden ? <InlineAlert tone="info" message={t('details.hiddenNotice')} /> : null}
       {doc.uploadIncomplete ? (
@@ -188,6 +259,7 @@ export function DocumentDetailsScreen() {
               recipient={r}
               isYou={r.userId !== null && r.userId === userId}
               separator={i < recipients.data.length - 1}
+              onPress={remindable(r) ? () => setSheet({ kind: 'recipient', recipient: r }) : undefined}
             />
           ))
         )}
@@ -201,6 +273,16 @@ export function DocumentDetailsScreen() {
             icon="create-outline"
             onPress={() => router.push({ pathname: '/documents/[id]/sign', params: { id: doc.id } })}
             testID="details-sign"
+          />
+        ) : null}
+        {canManage && recipients.data?.some(remindable) ? (
+          <AppButton
+            title={t('lifecycle.remindAll')}
+            icon="alarm-outline"
+            variant="secondary"
+            accessibilityHint={t('lifecycle.remindHint')}
+            onPress={() => void runRemind()}
+            testID="details-remind-all"
           />
         ) : null}
         {doc.status === 'completed' ? (
@@ -297,6 +379,18 @@ export function DocumentDetailsScreen() {
             testID="details-hide"
           />
         ) : null}
+        {canManage ? (
+          <AppButton
+            title={t('lifecycle.void')}
+            icon="ban-outline"
+            variant="destructive"
+            onPress={() => {
+              setLifecycleError(null);
+              setSheet({ kind: 'void' });
+            }}
+            testID="details-void"
+          />
+        ) : null}
         {keys.includes('delete') ? (
           <AppButton
             title={t('common.delete')}
@@ -307,7 +401,42 @@ export function DocumentDetailsScreen() {
           />
         ) : null}
       </View>
+      {doc.status !== 'draft' ? (
+        <>
+          <SectionHeader title={t('activity.timeline')} />
+          <DocumentTimeline documentId={doc.id} />
+        </>
+      ) : null}
       {actions.elements}
+      <VoidSheet
+        visible={sheet?.kind === 'void'}
+        busy={busy}
+        error={sheet?.kind === 'void' ? lifecycleError : null}
+        onConfirm={(reason) => void runVoid(reason)}
+        onClose={() => setSheet(null)}
+      />
+      <ActionSheet
+        visible={sheet?.kind === 'recipient'}
+        title={
+          sheet?.kind === 'recipient' ? t('lifecycle.recipientActions', { name: sheet.recipient.name }) : ''
+        }
+        actions={
+          sheet?.kind === 'recipient'
+            ? [
+                {
+                  key: 'remind',
+                  label: t('lifecycle.remindOne', { name: sheet.recipient.name }),
+                  hint: t('lifecycle.remindHint'),
+                  icon: 'alarm-outline',
+                  onPress: () => void runRemind(sheet.recipient.id),
+                },
+              ]
+            : []
+        }
+        onClose={() => setSheet(null)}
+        closeLabel={t('common.close')}
+        testID="recipient-actions"
+      />
     </Screen>
   );
 }

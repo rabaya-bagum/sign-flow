@@ -49,6 +49,9 @@ export async function updatePassword(password: string): Promise<void> {
 }
 
 export async function signOut(): Promise<void> {
+  // While still signed in (RLS): stop pushes to this device for the leaving account.
+  const { forgetDeviceToken } = await import('@/features/notifications/deviceToken');
+  await forgetDeviceToken();
   const { error } = await supabase.auth.signOut();
   if (error) throw toAppError(error);
 }

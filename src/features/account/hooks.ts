@@ -13,6 +13,7 @@ import {
   fetchProfile,
   removeAvatar,
   updateProfile,
+  updateSigningDefaults,
   updateThemePreference,
   uploadAvatar,
   type Profile,
@@ -41,6 +42,16 @@ export function useUpdateProfile() {
       queryClient.setQueryData(queryKeys.profile(profile.id), profile);
       void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     },
+  });
+}
+
+export function useUpdateSigningDefaults() {
+  const userId = useCurrentUserId();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (values: { expiryDays: number; reminderDays: number | null }) =>
+      updateSigningDefaults(requireUser(userId), values),
+    onSuccess: (profile) => queryClient.setQueryData(queryKeys.profile(profile.id), profile),
   });
 }
 

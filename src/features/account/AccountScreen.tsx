@@ -157,7 +157,11 @@ export function AccountScreen() {
       </Section>
 
       <Section title={t('account.notifications')}>
-        <ListRow title={t('account.notificationSettings')} subtitle={comingIn(7)} disabled />
+        <ListRow
+          title={t('account.notificationSettings')}
+          onPress={() => router.push('/account/notifications')}
+          testID="account-notifications"
+        />
       </Section>
 
       <Section title={t('account.preferences')}>
@@ -169,7 +173,11 @@ export function AccountScreen() {
           testID="account-theme"
         />
         <ListRow title={t('account.language')} value={t('account.languageEnglish')} separator />
-        <ListRow title={t('account.defaultSigning')} subtitle={comingIn(5)} disabled />
+        <ListRow
+          title={t('account.defaultSigning')}
+          onPress={() => router.push('/account/default-signing')}
+          testID="account-default-signing"
+        />
       </Section>
 
       <Section title={t('account.storage')}>

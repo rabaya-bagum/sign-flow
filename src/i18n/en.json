@@ -145,7 +145,9 @@
     "documentDetails": "Details for {{title}}",
     "emptyTitle": "No documents yet",
     "emptyBody": "You haven't uploaded any documents yet.",
-    "loadError": "We couldn't load your documents."
+    "loadError": "We couldn't load your documents.",
+    "notificationsUnread_one": "Notifications, {{count}} unread",
+    "notificationsUnread_other": "Notifications, {{count}} unread"
   },
   "status": {
     "draft": "Draft",
@@ -162,12 +164,6 @@
     "hoursAgo": "{{count}}h ago",
     "yesterday": "Yesterday",
     "daysAgo": "{{count}}d ago"
-  },
-  "placeholders": {
-    "activityTitle": "Activity",
-    "activityBody": "Activity on your documents will appear here in Phase 7.",
-    "notificationsTitle": "Notifications",
-    "notificationsBody": "No notifications yet. Notifications arrive in Phase 7."
   },
   "account": {
     "title": "Account",
@@ -353,7 +349,8 @@
     "signNow": "Sign now",
     "approveNow": "Review and approve",
     "downloadSigned": "Download signed copy",
-    "downloadCertificate": "Download certificate"
+    "downloadCertificate": "Download certificate",
+    "voidedBanner": "Voided: {{reason}}"
   },
   "search": {
     "title": "Search",
@@ -573,7 +570,7 @@
     "remindersOff": "Off",
     "remindersEvery_one": "Every day",
     "remindersEvery_other": "Every {{count}} days",
-    "remindersHint": "Reminders go out to people who haven't acted yet (from Phase 7).",
+    "remindersHint": "Reminders go out to people who haven't acted yet. You can also remind them yourself from the document.",
     "requireOtp": "Require a one-time code by email to open",
     "requireOtpHint": "Guests confirm their email before seeing the document.",
     "allowDecline": "Allow signers to decline",
@@ -684,5 +681,77 @@
     "otpCode": "6-digit code",
     "otpVerify": "Continue",
     "viewOnly": "You can view this document. There's nothing for you to sign."
+  },
+  "activity": {
+    "title": "Activity",
+    "empty": "Activity on your documents will appear here.",
+    "emptyFiltered": "No activity of this kind yet.",
+    "filterLabel": "Show",
+    "filter_all": "All",
+    "filter_signatures": "Signed",
+    "filter_sent": "Sent",
+    "filter_views": "Viewed",
+    "filter_completed": "Completed",
+    "filter_closed": "Declined & voided",
+    "rowLabel": "{{description}}, {{document}}, {{time}}",
+    "by": "by {{name}}",
+    "loadMore": "Loading more…",
+    "timeline": "Activity",
+    "timelineEmpty": "No activity yet.",
+    "showAll": "Show all activity ({{count}})",
+    "showLess": "Show less"
+  },
+  "inbox": {
+    "title": "Notifications",
+    "empty": "No notifications yet.",
+    "markAllRead": "Mark all as read",
+    "unread": "Unread",
+    "itemLabel": "{{title}}, {{body}}, {{time}}",
+    "itemUnread": "unread"
+  },
+  "notificationPrefs": {
+    "title": "Notifications",
+    "channels": "Channels",
+    "email": "Email",
+    "emailHint": "Updates by email. Signature requests sent to your email address always arrive.",
+    "push": "Push notifications",
+    "pushHint": "Alerts on this device.",
+    "pushUnavailable": "Push notifications aren't available on this device or build.",
+    "pushDenied": "Push notifications are turned off for SignFlow in your device settings.",
+    "openSettings": "Open settings",
+    "topics": "What to tell you about",
+    "topic_requests": "Signature requests",
+    "topic_requestsHint": "Documents sent to you to sign or approve",
+    "topic_reminders": "Reminders",
+    "topic_remindersHint": "Reminders and documents that expire soon",
+    "topic_completed": "Completed and closed documents",
+    "topic_completedHint": "Completed, declined, voided and expired",
+    "topic_activity": "Activity on documents you sent",
+    "topic_activityHint": "When someone opens or signs",
+    "inAppNote": "Everything also appears in your in-app notifications."
+  },
+  "defaultSigning": {
+    "title": "Default signing settings",
+    "intro": "Used for new documents. You can change them for each document before sending.",
+    "expiry": "Documents expire after",
+    "reminders": "Remind signers",
+    "saved": "Saved"
+  },
+  "lifecycle": {
+    "remind": "Remind",
+    "remindAll": "Remind everyone",
+    "remindOne": "Remind {{name}}",
+    "remindHint": "Emails a new signing link. Each person can be reminded once a day.",
+    "reminded": "Reminder sent.",
+    "remindedMany": "Reminders sent: {{count}}.",
+    "remindSkipped": "Some people were reminded in the last 24 hours and were skipped.",
+    "void": "Void document",
+    "voidTitle": "Void this document?",
+    "voidBody": "Signing links stop working and the document can't be completed. Everyone who was asked to sign is told, with your reason.",
+    "voidReason": "Reason",
+    "voidReasonHint": "Required. Recipients will see it.",
+    "voidConfirm": "Void",
+    "voided": "Document voided.",
+    "recipientActions": "Actions for {{name}}"
   }
 }

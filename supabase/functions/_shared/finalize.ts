@@ -6,6 +6,7 @@ import { PDFDocument, type SupabaseClient, StandardFonts } from './deps.ts';
 import { type EmailAttachment, emailProvider } from './email/provider.ts';
 import { completedEmail } from './email/templates.ts';
 import { logEventAs, SYSTEM_ACTOR } from './events.ts';
+import { deliver } from './notifications.ts';
 import { HttpError } from './http.ts';
 import { buildCertificate, type CertificateData } from './pdf/certificate.ts';
 import { stampImage, stampText, type TextAlign } from './pdf/stamp.ts';
@@ -264,7 +265,20 @@ export async function finalizeDocument(admin: SupabaseClient, documentId: string
     certificate_sha256: await sha256Hex(certificateBytes),
   });
 
-  // --- Email everyone, CC included -------------------------------------------------------------------
+  // --- In-app + push for account holders; email everyone, CC included ---
+  const accountIds = new Set<string>([doc.owner_id]);
+  for (const r of recipients) if (r.user_id) accountIds.add(r.user_id);
+  await deliver(
+    admin,
+    [...accountIds].map((userId) => ({
+      userId,
+      documentId: doc.id,
+      type: 'completed' as const,
+      title: 'Everyone has signed',
+      body: doc.title,
+    })),
+  );
+
   const attach = completed.length + certificateBytes.length <= MAX_ATTACHMENT_BYTES;
   const attachments: EmailAttachment[] = attach
     ? [

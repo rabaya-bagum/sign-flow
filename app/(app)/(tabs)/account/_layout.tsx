@@ -21,6 +21,8 @@ export default function AccountLayout() {
       <Stack.Screen name="profile" options={{ title: t('account.editProfile') }} />
       <Stack.Screen name="preferences" options={{ title: t('account.preferences') }} />
       <Stack.Screen name="signatures" options={{ title: t('signatures.screenTitle') }} />
+      <Stack.Screen name="notifications" options={{ title: t('notificationPrefs.title') }} />
+      <Stack.Screen name="default-signing" options={{ title: t('defaultSigning.title') }} />
     </Stack>
   );
 }

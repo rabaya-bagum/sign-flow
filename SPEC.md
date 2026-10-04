@@ -478,7 +478,7 @@ create table profiles (
   avatar_path text,                    -- storage path, not URL
   theme text not null default 'system' check (theme in ('system','light','dark')),
   locale text not null default 'en',
-  notification_prefs jsonb not null default '{}'::jsonb,
+  notification_prefs jsonb not null default '{}'::jsonb, -- {email, push, topics:{requests,reminders,completed,activity}}; /shared/notifications.ts
   default_expiry_days int not null default 30,
   default_reminder jsonb not null default '{"first_after_days":3,"repeat_every_days":3}'::jsonb,
   created_at timestamptz not null default now(),
@@ -509,6 +509,7 @@ create table documents (
   completed_at timestamptz,
   voided_at timestamptz,
   deleted_at timestamptz,             -- drafts only; soft delete (§6.2)
+  expiry_warned_at timestamptz,       -- "expires tomorrow" sent (§11)
   void_reason text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -720,18 +721,18 @@ where noted, and audit logging through a shared `logEvent()` that captures IP an
 | `signing-session` / `esign-consent`                                                                | auth recipient         | Open the signing screen (state, signed page URL, own fields, earlier values; marks `viewed`); record ESIGN consent                                                                                                                                                                                                                                                           |
 | `guest-open` / `guest-consent` / `guest-submit` / `guest-decline` / `guest-download` / `guest-otp` | guest token            | Guest equivalents (§7). Rate-limited per token and IP                                                                                                                                                                                                                                                                                                                        |
 | `decline`                                                                                          | auth recipient         | Decline with reason → document `declined`, notify owner + participants                                                                                                                                                                                                                                                                                                       |
-| `void-document`                                                                                    | owner                  | Void with reason, revoke tokens, notify active recipients                                                                                                                                                                                                                                                                                                                    |
-| `remind`                                                                                           | owner                  | Re-notify active, un-acted recipients (rate-limited)                                                                                                                                                                                                                                                                                                                         |
+| `void-document`                                                                                    | owner                  | Void with reason, revoke tokens; email active and finished recipients, in-app notice for account holders                                                                                                                                                                                                                                                                     |
+| `remind`                                                                                           | owner                  | Re-send the request with a new link (old links stop working) to one or all active, un-acted recipients; once per recipient per 24 h (`claim_manual_reminder`)                                                                                                                                                                                                                |
 | `finalize-document`                                                                                | internal (owner retry) | Flatten values into a copy of the original (`pdf-lib`), generate the certificate, hash, store, set `completed`, email the final PDF + certificate to all participants including CC. Runs inside the last `submit-signing`; the owner can retry it if that step failed                                                                                                        |
 | `get-download-url`                                                                                 | auth participant       | Authorize, log, and return a signed URL. `purpose: 'view' \| 'download'` logs `DOCUMENT_VIEWED` (de-duplicated: one per user per document per 30 min; never changes recipient status) or `DOCUMENT_DOWNLOADED`                                                                                                                                                               |
 | `delete-draft`                                                                                     | owner                  | Soft-delete a draft, remove its storage objects, log `DOCUMENT_DELETED`                                                                                                                                                                                                                                                                                                      |
-| `cron-tick`                                                                                        | `pg_cron` every 15 min | Send due reminders; expire overdue documents; clean up `uploads-tmp`                                                                                                                                                                                                                                                                                                         |
-| `register-push-token`                                                                              | auth                   | Upsert push token                                                                                                                                                                                                                                                                                                                                                            |
+| `cron-tick`                                                                                        | `pg_cron` every 15 min | Expire overdue documents; "expires tomorrow" emails; due reminders; retry stalled finalizations; clean up `uploads-tmp`. Each step claims rows atomically. Called with a shared secret (`x-cron-secret`, Vault `cron_tick_url`/`cron_tick_secret`), not a JWT                                                                                                                |
+| `register-push-token`                                                                              | auth                   | Upsert the device's Expo push token for the caller (moves it if the device changed accounts); clients may delete their own tokens                                                                                                                                                                                                                                            |
 | `delete-account`                                                                                   | auth                   | §17.3                                                                                                                                                                                                                                                                                                                                                                        |
 
 Postgres RPCs (security invoker unless noted): `get_dashboard_summary()`, `list_documents(...)`,
 `search_documents(q)`, `get_document(id)` (works for hidden documents), `get_storage_usage()`,
-`list_document_senders()`, `list_activity(cursor)`, `link_recipients_to_user()` (security definer, called after
+`list_document_senders()`, `list_activity(before_created_at, before_id, limit, types[])`, `link_recipients_to_user()` (security definer, called after
 sign-in), `log_event(...)` (security definer, **execute revoked from `anon` and `authenticated`**).
 Display status is computed in one place, `document_display_status(...)`, used by `my_documents()` and
 `get_document()`. Service-role only: `check_rate_limit(...)`, `finalize_original_upload(...)`.
@@ -787,7 +788,10 @@ signer · completion timestamp · full event history (UTC, with the time zone st
 | Reminder                              | —            | ✅                            | —   | email, push                                            |
 | Expiring in 24 h (SHOULD) / Expired   | ✅ (expired) | ✅ (expiring)                 | —   | email, in-app                                          |
 
-Respect `profiles.notification_prefs`. Signature-request emails to guests can't be disabled, because
+Every notice for an account holder is written to the in-app inbox. Email and push respect
+`profiles.notification_prefs` (channel switches plus topics: requests, reminders, completed/closed,
+activity). Signature-request, reminder and completion emails to people signing by link, and void emails
+to recipients, are always sent. Signature-request emails to guests can't be disabled, because
 they are the product. Email templates are plain, accessible HTML with a text alternative, carrying the
 SignFlow brand only.
 

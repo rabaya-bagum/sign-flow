@@ -7,6 +7,8 @@ const googleIosUrlScheme = process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME;
 // opens the app if installed (universal links / Android App Links). The host must also serve
 // apple-app-site-association and assetlinks.json (see README).
 const signingDomain = process.env.SIGNFLOW_SIGNING_DOMAIN?.trim();
+// EAS project (eas init); push tokens need it. Push stays off in builds without it.
+const easProjectId = process.env.EAS_PROJECT_ID?.trim();
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -51,8 +53,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     favicon: './assets/favicon.png',
     output: 'single',
   },
+  ...(easProjectId ? { extra: { eas: { projectId: easProjectId } } } : {}),
   plugins: [
     'expo-router',
+    ['expo-notifications', { color: '#2B59D9' }],
     'expo-secure-store',
     'expo-apple-authentication',
     'expo-web-browser',

@@ -114,6 +114,7 @@ via `signflow://auth/callback`.
 | `npm run check:dev-routes`            | Export production bundles (web, Android) and fail if any `/dev/*` screen code is included                                |
 | `node tests/e2e/editor-roundtrip.mjs` | Field editor E2E on the web build (port 8081; needs `functions:serve`): place, drag, reload, compare with the DB         |
 | `node tests/e2e/send-flow.mjs`        | Recipients → fields → review & send in the web build; checks the emails in Mailpit                                       |
+| `node tests/e2e/activity-flow.mjs`    | Inbox notice → remind → void → timeline and Activity tab; notification settings saved                                    |
 | `node tests/e2e/signing-flow.mjs`     | Owner signs in the app, guest signs by link, CC copied; checks completion emails, attachments and certificate hashes     |
 | `npm run functions:deploy`            | Deploy the production Edge Functions (explicit list; never `dev-stamp`)                                                  |
 
@@ -191,6 +192,29 @@ Optional: `EXPO_PUBLIC_APP_DOWNLOAD_URL` shows "Get the SignFlow app" on the gue
 Completed documents: the flattened PDF and the certificate are emailed to everyone (attached up to
 15 MB together; always with a link). Guests get a 30-day download link; people with an account open the
 document in the app.
+
+### Reminders and expiry
+
+`cron-tick` runs every 15 minutes from `pg_cron` (scheduled by the migration). It sends due reminders,
+"expires tomorrow" emails, expires overdue documents, retries a failed finalization and deletes abandoned
+`uploads-tmp` images. The job POSTs to the function with a shared secret, both read from Vault:
+
+```sql
+-- Production (once per project; locally supabase/seed.sql does this):
+select vault.create_secret('https://<project-ref>.supabase.co/functions/v1/cron-tick', 'cron_tick_url');
+select vault.create_secret('<long random value>', 'cron_tick_secret');
+```
+
+Set the same value as the function secret `CRON_SECRET`. Without the Vault secrets the job does nothing.
+To trigger a run locally: `select public.run_cron_tick();` (as `postgres`).
+
+### Push notifications
+
+Push uses Expo push tokens (`expo-notifications`), so builds need an EAS project: run `eas init` and
+build with `EAS_PROJECT_ID=<id>`. Without it the app runs normally and the push switch is disabled.
+Push needs a development or store build on a real device (not Expo Go, simulators or the web). Function
+secret `EXPO_ACCESS_TOKEN` is only needed if "enhanced push security" is on for the project. Everyone
+also gets every notice in the in-app inbox (bell on Home).
 
 ### Fonts and licences
 

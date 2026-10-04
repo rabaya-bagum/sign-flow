@@ -104,3 +104,8 @@ values
    'Aaliyah Fatimah', 'recipient@signflow.test', 'Aaliyah Fatimah signed', now() - interval '8 days'),
   ('a0000000-0000-4000-8000-000000000004', 'DOCUMENT_COMPLETED', null,
    null, null, 'Document completed', now() - interval '8 days');
+
+-- cron-tick (SPEC §10): the pg_cron job reads its target from Vault. Local values only; production sets
+-- its own (see README → Reminders and expiry). Must match CRON_SECRET in supabase/functions/.env.
+select vault.create_secret('http://supabase_kong_sign-flow:8000/functions/v1/cron-tick', 'cron_tick_url');
+select vault.create_secret('local-cron-secret', 'cron_tick_secret');

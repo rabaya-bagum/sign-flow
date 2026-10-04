@@ -100,6 +100,7 @@ describe('SignatureSheet', () => {
     );
     expect(onComplete).toHaveBeenCalledWith({
       pngUri: 'file:///cache/signatures/x.png',
+      bytes: expect.any(Uint8Array),
       width: 600,
       height: 200,
       method: 'typed',

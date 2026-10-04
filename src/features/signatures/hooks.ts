@@ -16,12 +16,12 @@ import {
 } from './api';
 import type { SavedSignature, SignatureKind } from './types';
 
-export function useSavedSignatures(kind?: SignatureKind) {
+export function useSavedSignatures(kind?: SignatureKind, options: { enabled?: boolean } = {}) {
   const userId = useCurrentUserId();
   return useQuery({
     queryKey: queryKeys.signatures.list(),
     queryFn: listSavedSignatures,
-    enabled: Boolean(userId),
+    enabled: Boolean(userId) && options.enabled !== false,
     select: kind ? (rows: SavedSignature[]) => rows.filter((r) => r.kind === kind) : undefined,
   });
 }

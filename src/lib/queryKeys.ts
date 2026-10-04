@@ -18,6 +18,8 @@ export const queryKeys = {
     list: () => ['signatures', 'list'] as const,
     imageUrl: (path: string) => ['signatures', 'image-url', path] as const,
   },
+  /** Signing sessions hold short-lived URLs: never persisted, always refetched on open. */
+  signing: (mode: 'account' | 'guest', key: string) => ['signing', mode, key] as const,
   dashboard: {
     all: ['dashboard'] as const,
     summary: () => ['dashboard', 'summary'] as const,

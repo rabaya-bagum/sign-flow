@@ -8,6 +8,8 @@ export type SavedSignature = Database['public']['Tables']['saved_signatures']['R
 export interface SignatureResult {
   /** Local PNG: a cache file on native, a blob URL on web. Never a remote URL. */
   pngUri: string;
+  /** The same PNG in memory (signing submits it). */
+  bytes: Uint8Array;
   width: number;
   height: number;
   method: SignatureMethod;

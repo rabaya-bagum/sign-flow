@@ -68,6 +68,8 @@ function RootNavigator() {
           <Stack.Screen name="(app)" />
         </Stack.Protected>
         <Stack.Screen name="auth/callback" />
+        {/* Signing links work signed in or out (SPEC §5.12). */}
+        <Stack.Screen name="(guest)" />
         <Stack.Protected guard={__DEV__}>
           <Stack.Screen name="dev/components" options={{ headerShown: true, title: 'Components' }} />
           <Stack.Screen

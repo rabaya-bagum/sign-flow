@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl, StyleSheet, View } from 'react-native';
+import { Alert, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { isAppError } from '@shared/errors';
 
@@ -24,7 +24,7 @@ import { formatBytes } from '@/utils/formatBytes';
 
 import { availableActions, type ActionTarget } from './actions';
 import { DocumentPreviewCard } from './DocumentPreviewCard';
-import { canSaveToDevice } from './download';
+import { canSaveToDevice, shareDocument } from './download';
 import { useDocument, useMarkOpened, useRecipients } from './hooks';
 import type { Recipient } from './types';
 import { useDocumentActions } from './useDocumentActions';
@@ -80,6 +80,14 @@ export function DocumentDetailsScreen() {
     onDeleted: () => (router.canGoBack() ? router.back() : router.replace('/documents')),
   });
 
+  const downloadKind = async (kind: 'completed' | 'certificate') => {
+    try {
+      await shareDocument(id, kind);
+    } catch (e) {
+      Alert.alert(t('errors.title'), errorMessage(e));
+    }
+  };
+
   if (document.isPending) return <LoadingSkeleton rows={4} testID="details-loading" />;
   if (document.isError) {
     return isAppError(document.error) &&
@@ -107,6 +115,17 @@ export function DocumentDetailsScreen() {
   };
   const keys = availableActions(target, { includeOpen: false, canSave: canSaveToDevice });
   const isDraftOwner = doc.status === 'draft' && doc.isOwner;
+  // The caller's own turn to sign or approve (SPEC §6.3 "Needs your signature").
+  const myTurn =
+    doc.status === 'in_progress'
+      ? recipients.data?.find(
+          (r) =>
+            r.userId !== null &&
+            r.userId === userId &&
+            (r.role === 'signer' || r.role === 'approver') &&
+            (r.status === 'sent' || r.status === 'viewed'),
+        )
+      : undefined;
 
   return (
     <Screen
@@ -176,6 +195,31 @@ export function DocumentDetailsScreen() {
 
       <SectionHeader title={t('details.actions')} />
       <View style={styles.actions}>
+        {myTurn ? (
+          <AppButton
+            title={myTurn.role === 'approver' ? t('details.approveNow') : t('details.signNow')}
+            icon="create-outline"
+            onPress={() => router.push({ pathname: '/documents/[id]/sign', params: { id: doc.id } })}
+            testID="details-sign"
+          />
+        ) : null}
+        {doc.status === 'completed' ? (
+          <>
+            <AppButton
+              title={t('details.downloadSigned')}
+              icon="download-outline"
+              onPress={() => void downloadKind('completed')}
+              testID="details-download-signed"
+            />
+            <AppButton
+              title={t('details.downloadCertificate')}
+              icon="ribbon-outline"
+              variant="secondary"
+              onPress={() => void downloadKind('certificate')}
+              testID="details-download-certificate"
+            />
+          </>
+        ) : null}
         {isDraftOwner && !doc.uploadIncomplete ? (
           <>
             <AppButton

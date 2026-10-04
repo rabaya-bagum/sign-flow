@@ -34,6 +34,10 @@ export default function AppLayout() {
         options={{ title: t('editor.title'), gestureEnabled: false }}
       />
       <Stack.Screen name="documents/[id]/review" options={{ title: t('review.title') }} />
+      <Stack.Screen
+        name="documents/[id]/sign"
+        options={{ title: t('signing.title'), gestureEnabled: false }}
+      />
     </Stack>
   );
 }

@@ -31,6 +31,8 @@ export interface SignatureSheetProps {
   defaultName: string;
   onComplete: (result: SignatureResult) => void;
   onClose: () => void;
+  /** Guest signing (no account): no saved signatures, nothing is saved. */
+  guest?: boolean;
 }
 
 /**
@@ -42,13 +44,13 @@ export function SignatureSheet(props: SignatureSheetProps) {
   return props.visible ? <SignatureSheetBody {...props} /> : null;
 }
 
-function SignatureSheetBody({ kind, defaultName, onComplete, onClose }: SignatureSheetProps) {
+function SignatureSheetBody({ kind, defaultName, onComplete, onClose, guest = false }: SignatureSheetProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const errorMessage = useAppErrorMessage();
-  const saved = useSavedSignatures(kind);
+  const saved = useSavedSignatures(kind, { enabled: !guest });
   const saveMutation = useSaveSignature();
-  const savedRows = saved.data ?? [];
+  const savedRows = guest ? [] : (saved.data ?? []);
   const hasSaved = savedRows.length > 0;
 
   const [mode, setMode] = useState<'saved' | 'new' | null>(null);
@@ -67,7 +69,7 @@ function SignatureSheetBody({ kind, defaultName, onComplete, onClose }: Signatur
   const [saveForFuture, setSaveForFuture] = useState<boolean | null>(null);
   const atLimit = savedRows.length >= MAX_SAVED_PER_KIND;
   // On by default only for the first signature of this kind.
-  const shouldSave = !atLimit && (saveForFuture ?? (saved.isSuccess && !hasSaved));
+  const shouldSave = !guest && !atLimit && (saveForFuture ?? (saved.isSuccess && !hasSaved));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -92,6 +94,7 @@ function SignatureSheetBody({ kind, defaultName, onComplete, onClose }: Signatur
         if (!size) throw new AppError('FILE_UNSUPPORTED');
         onComplete({
           pngUri: await writeSignaturePng(bytes),
+          bytes,
           ...size,
           method: selected.method,
           savedSignatureId: selected.id,
@@ -119,6 +122,7 @@ function SignatureSheetBody({ kind, defaultName, onComplete, onClose }: Signatur
       }
       onComplete({
         pngUri: await writeSignaturePng(png.bytes),
+        bytes: png.bytes,
         width: png.width,
         height: png.height,
         method,
@@ -275,7 +279,7 @@ function SignatureSheetBody({ kind, defaultName, onComplete, onClose }: Signatur
                 onError={setError}
               />
             ) : null}
-            {atLimit ? (
+            {guest ? null : atLimit ? (
               <AppText variant="footnote" color="textSecondary">
                 {t('signatures.limitReached')}
               </AppText>

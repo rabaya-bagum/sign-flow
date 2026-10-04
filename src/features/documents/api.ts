@@ -63,12 +63,15 @@ export function processUpload(documentId: string, imagePaths?: string[]): Promis
   });
 }
 
+export type DownloadKind = 'original' | 'completed' | 'certificate';
+
 export function getDownloadUrl(
   documentId: string,
+  kind: DownloadKind = 'original',
 ): Promise<{ url: string; expires_in: number; file_name: string }> {
   return invokeFunction('get-download-url', {
     document_id: documentId,
-    kind: 'original',
+    kind,
     purpose: 'download',
   });
 }

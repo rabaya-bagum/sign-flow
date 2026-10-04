@@ -42,11 +42,11 @@ cp .env.example .env
 # Start Postgres, Auth, Storage, Mailpit… (first run pulls Docker images)
 npm run db:start
 
-# In another terminal: serve the Edge Functions (process-upload, get-download-url, delete-draft)
+# In another terminal: serve the Edge Functions (uploads, downloads, sending, signing)
 npm run functions:serve
 ```
 
-Uploads, downloads and draft deletion go through Edge Functions, so keep `functions:serve` running while
+Uploads, downloads, sending and signing go through Edge Functions, so keep `functions:serve` running while
 using the app locally. The functions need no extra secrets: the local runtime provides `SUPABASE_URL`,
 `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY`.
 
@@ -114,6 +114,7 @@ via `signflow://auth/callback`.
 | `npm run check:dev-routes`            | Export production bundles (web, Android) and fail if any `/dev/*` screen code is included                                |
 | `node tests/e2e/editor-roundtrip.mjs` | Field editor E2E on the web build (port 8081; needs `functions:serve`): place, drag, reload, compare with the DB         |
 | `node tests/e2e/send-flow.mjs`        | Recipients → fields → review & send in the web build; checks the emails in Mailpit                                       |
+| `node tests/e2e/signing-flow.mjs`     | Owner signs in the app, guest signs by link, CC copied; checks completion emails, attachments and certificate hashes     |
 | `npm run functions:deploy`            | Deploy the production Edge Functions (explicit list; never `dev-stamp`)                                                  |
 
 After changing a migration: `npm run db:reset && npm run gen:types && npm run db:test`.
@@ -172,6 +173,24 @@ production set the function secrets `RESEND_API_KEY`, `EMAIL_FROM` (a verified R
 `PUBLIC_SIGNING_URL` (the web app origin serving `/s/<token>`). Locally, copy
 `supabase/functions/.env.example` to `supabase/functions/.env`: mail goes to the stack's Mailpit, readable
 at <http://127.0.0.1:54324>.
+
+### Signing links
+
+Guests sign at `PUBLIC_SIGNING_URL/s/<token>`: the same Expo Router route, served by the web export
+(`npx expo export --platform web`, `web.output: 'single'`, so the host must fall back to `index.html` for
+unknown paths). To open the app instead when it is installed, build with
+`SIGNFLOW_SIGNING_DOMAIN=<host>` (adds iOS associated domains and an Android App Link intent filter for
+`https://<host>/s/*`) and serve, from that host:
+
+- `/.well-known/apple-app-site-association` with an `applinks` entry for `<TEAMID>.<bundle id>` and the
+  path `/s/*`;
+- `/.well-known/assetlinks.json` with the Android package and the release signing certificate SHA-256.
+
+Optional: `EXPO_PUBLIC_APP_DOWNLOAD_URL` shows "Get the SignFlow app" on the guest pages.
+
+Completed documents: the flattened PDF and the certificate are emailed to everyone (attached up to
+15 MB together; always with a link). Guests get a 30-day download link; people with an account open the
+document in the app.
 
 ### Fonts and licences
 
@@ -242,3 +261,8 @@ against a dev web build on port 8081.
 - The audit log (`document_events`) is append-only and can only be written server-side.
 - Document files are never readable directly: downloads use 5-minute signed URLs issued after an access
   check, and every download is audited. Processed originals cannot be overwritten.
+- Signing links carry a random 256-bit token; only its SHA-256 is stored. Every guest call re-validates
+  it and is rate-limited per token and per IP. Optional email codes are hashed, expire after 10 minutes
+  and allow 5 attempts. Links stop working when the document ends (or a newer link is sent).
+- Signing state changes (values, group advance, decline, completion) run in database functions that lock
+  the document row, so concurrent submissions cannot both finalize or skip a signer.

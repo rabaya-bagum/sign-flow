@@ -6,7 +6,7 @@ import { AppError } from '@shared/errors';
 
 import { env } from '@/lib/env';
 
-import { getDownloadUrl } from './api';
+import { type DownloadKind, getDownloadUrl } from './api';
 
 /**
  * Signed URLs are minted inside the Edge Function, whose Supabase URL can be an internal host
@@ -16,8 +16,13 @@ export function toAppUrl(signedUrl: string, baseUrl: string = env.supabaseUrl): 
   return signedUrl.replace(/^https?:\/\/[^/]+/i, baseUrl.replace(/\/+$/, ''));
 }
 
-async function downloadToCache(documentId: string) {
-  const { url, file_name } = await getDownloadUrl(documentId);
+interface SignedFile {
+  url: string;
+  file_name: string;
+}
+
+async function downloadToCache(signed: SignedFile) {
+  const { url, file_name } = signed;
   const { Directory, File, Paths } = await import('expo-file-system');
   const dir = new Directory(Paths.cache, 'downloads', Crypto.randomUUID());
   dir.create({ intermediates: true, idempotent: true });
@@ -31,13 +36,17 @@ async function downloadToCache(documentId: string) {
 }
 
 /** Download → system share sheet (iOS "Save to Files" lives there) → delete the cached copy. */
-export async function shareDocument(documentId: string): Promise<void> {
+export async function shareDocument(documentId: string, kind: DownloadKind = 'original'): Promise<void> {
+  await shareSignedFile(await getDownloadUrl(documentId, kind));
+}
+
+/** Shares a file from a signed URL (also used by guest downloads, which get their URL by link token). */
+export async function shareSignedFile(signed: SignedFile): Promise<void> {
   if (Platform.OS === 'web') {
-    const { url } = await getDownloadUrl(documentId);
-    await Linking.openURL(toAppUrl(url));
+    await Linking.openURL(toAppUrl(signed.url));
     return;
   }
-  const { file, fileName, cleanup } = await downloadToCache(documentId);
+  const { file, fileName, cleanup } = await downloadToCache(signed);
   try {
     await Sharing.shareAsync(file.uri, {
       mimeType: 'application/pdf',
@@ -52,7 +61,7 @@ export async function shareDocument(documentId: string): Promise<void> {
 export const canSaveToDevice = Platform.OS === 'android';
 
 /** Android: let the user pick a folder (Storage Access Framework) and write the PDF there. */
-export async function saveToDevice(documentId: string): Promise<boolean> {
+export async function saveToDevice(documentId: string, kind: DownloadKind = 'original'): Promise<boolean> {
   if (!canSaveToDevice) return false;
   const { Directory } = await import('expo-file-system');
   let target;
@@ -61,7 +70,7 @@ export async function saveToDevice(documentId: string): Promise<boolean> {
   } catch {
     return false; // user cancelled the folder picker
   }
-  const { file, fileName, cleanup } = await downloadToCache(documentId);
+  const { file, fileName, cleanup } = await downloadToCache(await getDownloadUrl(documentId, kind));
   try {
     target.createFile(fileName, 'application/pdf').write(await file.bytes());
     return true;

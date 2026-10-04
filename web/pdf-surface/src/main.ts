@@ -3,9 +3,21 @@
  * double-tap zoom) and draws overlays positioned in page fractions (SPEC §8.1). Runs inside
  * react-native-webview on native and an iframe on web; talks to the host via ./transport.
  */
-import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy, type PDFPageProxy, type RenderTask } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import {
+  GlobalWorkerOptions,
+  getDocument,
+  type PDFDocumentLoadingTask,
+  type PDFDocumentProxy,
+  type PDFPageProxy,
+  type RenderTask,
+} from 'pdfjs-dist/legacy/build/pdf.mjs';
 
-import { BRIDGE_VERSION, type PageGeometry, type SurfaceCommand, type SurfaceOverlay } from '../../../shared/pdfBridge';
+import {
+  BRIDGE_VERSION,
+  type PageGeometry,
+  type SurfaceCommand,
+  type SurfaceOverlay,
+} from '../../../shared/pdfBridge';
 
 import { emit, listen } from './transport';
 
@@ -17,17 +29,50 @@ const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
 const DOUBLE_TAP_MS = 280;
 const TAP_SLOP_PX = 10;
+/** Opening (not rendering) a document; a stalled worker or network becomes an error with retry. */
+const LOAD_TIMEOUT_MS = 30_000;
 
 // --- Worker: inlined source → Blob URL (offline, single file). -----------------------------------
-(function setupWorker() {
-  const url = URL.createObjectURL(new Blob([__PDF_WORKER_SRC__], { type: 'text/javascript' }));
-  try {
-    GlobalWorkerOptions.workerPort = new Worker(url, { type: 'module' });
-  } catch {
-    // Module workers unavailable: pdf.js falls back to a main-thread "fake worker" via import().
-    GlobalWorkerOptions.workerSrc = url;
-  }
-})();
+// A classic worker (module workers fail in opaque origins). If it cannot start, the same script runs
+// on the main thread, where pdf.js finds it as `globalThis.pdfjsWorker`: slower, but it renders.
+let workerMode: 'pending' | 'worker' | 'main-thread' = 'pending';
+let workerReady: Promise<void> | null = null;
+
+function ensureWorker(): Promise<void> {
+  workerReady ??= new Promise<void>((resolve) => {
+    const url = URL.createObjectURL(new Blob([__PDF_WORKER_SRC__], { type: 'text/javascript' }));
+    let worker: Worker | null = null;
+    let settled = false;
+    const settle = (mode: 'worker' | 'main-thread') => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (mode === 'worker' && worker) {
+        GlobalWorkerOptions.workerPort = worker;
+        workerMode = 'worker';
+        resolve();
+        return;
+      }
+      worker?.terminate();
+      workerMode = 'main-thread';
+      const script = document.createElement('script');
+      script.src = url;
+      script.onload = () => resolve();
+      script.onerror = () => resolve(); // getDocument then reports PDF_RENDER_FAILED
+      document.head.appendChild(script);
+    };
+    // The worker announces itself with a "ready" message once its script has run.
+    const timer = setTimeout(() => settle('main-thread'), 5000);
+    try {
+      worker = new Worker(url);
+      worker.addEventListener('message', () => settle('worker'), { once: true });
+      worker.addEventListener('error', () => settle('main-thread'), { once: true });
+    } catch {
+      settle('main-thread');
+    }
+  });
+  return workerReady;
+}
 
 interface PageState {
   number: number;
@@ -46,6 +91,9 @@ const viewer = document.getElementById('viewer') as HTMLDivElement;
 const pagesEl = document.getElementById('pages') as HTMLDivElement;
 
 let doc: PDFDocumentProxy | null = null;
+let loadingTask: PDFDocumentLoadingTask | null = null;
+/** Incremented per load, so a superseded load stops at its next await. */
+let loadGeneration = 0;
 let pages: PageState[] = [];
 let zoom = 1;
 let currentPage = 1;
@@ -59,6 +107,9 @@ const stats = { firstPageMs: -1, renders: 0, liveCanvases: 0, canvasPixels: 0, l
 (window as unknown as { __surface: unknown }).__surface = {
   stats,
   canvas: (n: number) => pages[n - 1]?.canvas ?? null,
+  get workerMode() {
+    return workerMode;
+  },
 };
 
 // --- Layout ----------------------------------------------------------------------------------------
@@ -138,7 +189,12 @@ function renderNearPages(): void {
 }
 
 function reportRenderError(error: unknown): void {
-  emit({ v: BRIDGE_VERSION, type: 'error', code: 'PDF_RENDER_FAILED', message: String((error as Error)?.message ?? error).slice(0, 500) });
+  emit({
+    v: BRIDGE_VERSION,
+    type: 'error',
+    code: 'PDF_RENDER_FAILED',
+    message: String((error as Error)?.message ?? error).slice(0, 500),
+  });
 }
 
 // --- Overlays ----------------------------------------------------------------------------------------
@@ -171,7 +227,9 @@ function drawOverlays(): void {
 // --- Navigation --------------------------------------------------------------------------------------
 function updateCurrentPage(): void {
   const mid = viewer.scrollTop + viewer.clientHeight / 2;
-  const found = pages.find((p) => p.el.offsetTop <= mid && p.el.offsetTop + p.el.offsetHeight + PAGE_GAP > mid);
+  const found = pages.find(
+    (p) => p.el.offsetTop <= mid && p.el.offsetTop + p.el.offsetHeight + PAGE_GAP > mid,
+  );
   if (found && found.number !== currentPage) {
     currentPage = found.number;
     emit({ v: BRIDGE_VERSION, type: 'pageChanged', page: currentPage, pageCount: pages.length });
@@ -221,7 +279,12 @@ viewer.addEventListener(
     if (e.touches.length === 2) {
       const a = e.touches[0]!;
       const b = e.touches[1]!;
-      pinch = { startDistance: distance(e.touches), midX: (a.clientX + b.clientX) / 2, midY: (a.clientY + b.clientY) / 2, factor: 1 };
+      pinch = {
+        startDistance: distance(e.touches),
+        midX: (a.clientX + b.clientX) / 2,
+        midY: (a.clientY + b.clientY) / 2,
+        factor: 1,
+      };
       tapStart = null;
       const rect = viewer.getBoundingClientRect();
       pagesEl.style.transformOrigin = `${viewer.scrollLeft + pinch.midX - rect.left}px ${viewer.scrollTop + pinch.midY - rect.top}px`;
@@ -235,7 +298,10 @@ viewer.addEventListener(
   (e) => {
     if (!pinch || e.touches.length !== 2) return;
     e.preventDefault();
-    pinch.factor = Math.min(MAX_ZOOM / zoom, Math.max(MIN_ZOOM / zoom, distance(e.touches) / pinch.startDistance));
+    pinch.factor = Math.min(
+      MAX_ZOOM / zoom,
+      Math.max(MIN_ZOOM / zoom, distance(e.touches) / pinch.startDistance),
+    );
     pagesEl.style.transform = `scale(${pinch.factor})`;
   },
   { passive: false },
@@ -271,7 +337,11 @@ viewer.addEventListener('pointerup', (e) => {
   tapStart = null;
   if (moved) return;
   const now = performance.now();
-  if (lastTap && now - lastTap.t < DOUBLE_TAP_MS && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 40) {
+  if (
+    lastTap &&
+    now - lastTap.t < DOUBLE_TAP_MS &&
+    Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 40
+  ) {
     if (pendingTap) clearTimeout(pendingTap);
     pendingTap = null;
     lastTap = null;
@@ -311,10 +381,18 @@ function geometryOf(page: PDFPageProxy): PageGeometry {
   const swap = rotation === 90 || rotation === 270;
   const w = x1 - x0;
   const h = y1 - y0;
-  return { page: page.pageNumber, width_pt: swap ? h : w, height_pt: swap ? w : h, box_x_pt: x0, box_y_pt: y0, rotation };
+  return {
+    page: page.pageNumber,
+    width_pt: swap ? h : w,
+    height_pt: swap ? w : h,
+    box_x_pt: x0,
+    box_y_pt: y0,
+    rotation,
+  };
 }
 
 async function load(command: Extract<SurfaceCommand, { type: 'load' }>): Promise<void> {
+  const generation = ++loadGeneration;
   loadStartedAt = performance.now();
   document.body.style.background = command.background;
   observer?.disconnect();
@@ -326,17 +404,40 @@ async function load(command: Extract<SurfaceCommand, { type: 'load' }>): Promise
   pages = [];
   zoom = 1;
   currentPage = 1;
-  await doc?.destroy();
+  const previous = loadingTask;
+  loadingTask = null;
+  doc = null;
+  await previous?.destroy();
+  if (generation !== loadGeneration) return;
 
+  let pdf: PDFDocumentProxy;
   try {
-    doc = await getDocument({ url: command.url, disableAutoFetch: true, isOffscreenCanvasSupported: false }).promise;
+    await ensureWorker();
+    if (generation !== loadGeneration) return;
+    const task = getDocument({ url: command.url, disableAutoFetch: true, isOffscreenCanvasSupported: false });
+    loadingTask = task;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    pdf = await Promise.race([
+      task.promise,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error('Timed out opening the document')), LOAD_TIMEOUT_MS);
+      }),
+    ]).finally(() => clearTimeout(timeout));
   } catch (error) {
+    if (generation !== loadGeneration) return;
     const offline = !navigator.onLine || /fetch|network/i.test(String((error as Error)?.message));
-    emit({ v: BRIDGE_VERSION, type: 'error', code: offline ? 'NETWORK_OFFLINE' : 'PDF_RENDER_FAILED', message: String((error as Error)?.message ?? error).slice(0, 500) });
+    emit({
+      v: BRIDGE_VERSION,
+      type: 'error',
+      code: offline ? 'NETWORK_OFFLINE' : 'PDF_RENDER_FAILED',
+      message: String((error as Error)?.message ?? error).slice(0, 500),
+    });
     return;
   }
 
-  const total = doc.numPages;
+  if (generation !== loadGeneration) return;
+  doc = pdf;
+  const total = pdf.numPages;
   const geometry: PageGeometry[] = [];
   observer = new IntersectionObserver(
     (entries) => {
@@ -356,19 +457,34 @@ async function load(command: Extract<SurfaceCommand, { type: 'load' }>): Promise
 
   for (let n = 1; n <= total; n++) {
     // Page sizes are needed for layout; getPage only fetches the page dictionary (range requests).
-    const proxy = await doc.getPage(n);
+    const proxy = await pdf.getPage(n);
+    if (generation !== loadGeneration) return;
     const g = geometryOf(proxy);
     geometry.push(g);
     const el = document.createElement('div');
     el.className = 'page';
     el.dataset.page = String(n);
     el.setAttribute('role', 'img');
-    el.setAttribute('aria-label', command.pageLabel.replace('{page}', String(n)).replace('{total}', String(total)));
+    el.setAttribute(
+      'aria-label',
+      command.pageLabel.replace('{page}', String(n)).replace('{total}', String(total)),
+    );
     const overlayLayer = document.createElement('div');
     overlayLayer.className = 'overlays';
     el.appendChild(overlayLayer);
     pagesEl.appendChild(el);
-    pages.push({ number: n, proxy, baseWidth: g.width_pt, baseHeight: g.height_pt, el, overlayLayer, canvas: null, renderedScale: 0, task: null, near: false });
+    pages.push({
+      number: n,
+      proxy,
+      baseWidth: g.width_pt,
+      baseHeight: g.height_pt,
+      el,
+      overlayLayer,
+      canvas: null,
+      renderedScale: 0,
+      task: null,
+      near: false,
+    });
   }
   layout();
   drawOverlays();
@@ -401,4 +517,6 @@ listen((command) => {
   }
 });
 
+// Start the worker while the host prepares its first command.
+void ensureWorker();
 emit({ v: BRIDGE_VERSION, type: 'ready' });

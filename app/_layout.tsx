@@ -68,6 +68,10 @@ function RootNavigator() {
         <Stack.Screen name="auth/callback" />
         <Stack.Protected guard={__DEV__}>
           <Stack.Screen name="dev/components" options={{ headerShown: true, title: 'Components' }} />
+          <Stack.Screen
+            name="dev/coordinate-spike"
+            options={{ headerShown: true, title: 'Coordinate spike' }}
+          />
         </Stack.Protected>
       </Stack>
     </>

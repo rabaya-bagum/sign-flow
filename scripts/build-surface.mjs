@@ -15,13 +15,31 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const out = join(root, 'assets/pdf-surface/surface.html');
 
-const workerSrc = readFileSync(require.resolve('pdfjs-dist/legacy/build/pdf.worker.min.mjs'), 'utf8');
+const target = ['es2020', 'safari15', 'chrome90'];
+
+// The worker is bundled as a classic script: module workers fail in opaque origins (file:// pages in
+// WebViews, sandboxed iframes). `globalName` also lets the surface run it on the main thread as a
+// fallback, where pdf.js picks it up from `globalThis.pdfjsWorker`.
+const worker = await build({
+  entryPoints: [require.resolve('pdfjs-dist/legacy/build/pdf.worker.mjs')],
+  bundle: true,
+  format: 'iife',
+  globalName: 'pdfjsWorker',
+  target,
+  minify: true,
+  legalComments: 'none',
+  write: false,
+  // Only used to locate optional wasm decoders, which are not bundled (see README).
+  define: { 'import.meta.url': 'self.location.href' },
+  logLevel: 'warning',
+});
+const workerSrc = worker.outputFiles[0].text;
 
 const result = await build({
   entryPoints: [join(root, 'web/pdf-surface/src/main.ts')],
   bundle: true,
   format: 'iife',
-  target: ['es2020', 'safari15', 'chrome90'],
+  target,
   minify: true,
   legalComments: 'none',
   write: false,

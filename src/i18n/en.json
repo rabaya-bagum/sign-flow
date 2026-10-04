@@ -351,5 +351,10 @@
     "hint": "Type at least 2 characters.",
     "matched": "Recipient: {{name}} · {{email}}",
     "results": "{{count}} results"
+  },
+  "viewer": {
+    "pageLabel": "Page {{page}} of {{total}}",
+    "pageIndicator": "{{page}} / {{total}}",
+    "loading": "Loading document…"
   }
 }

@@ -20,8 +20,11 @@
     "test:functions": "deno test -A --node-modules-dir=none supabase/functions/tests",
     "fixtures": "deno run --node-modules-dir=none -A scripts/generate-fixtures.ts",
     "functions:serve": "supabase functions serve",
+    "functions:deploy": "supabase functions deploy process-upload get-download-url delete-draft",
     "build:surface": "node scripts/build-surface.mjs",
     "check:surface": "node scripts/build-surface.mjs --check",
+    "check:dev-routes": "node scripts/check-dev-routes.mjs",
+    "test:surface": "node --test tests/surface/surface.test.mjs",
     "test:golden": "deno run --node-modules-dir=none -A scripts/golden/generate-stamped.ts && node --test tests/surface/golden.test.mjs"
   },
   "dependencies": {

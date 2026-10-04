@@ -41,7 +41,11 @@ function colorBox({ color: [tr, tg, tb], pageNumber }) {
   if (!canvas) return null;
   const { width, height } = canvas;
   const data = canvas.getContext('2d').getImageData(0, 0, width, height).data;
-  let minX = Infinity, minY = Infinity, maxX = -1, maxY = -1, count = 0;
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -1,
+    maxY = -1,
+    count = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const i = (y * width + x) * 4;
@@ -60,7 +64,11 @@ function colorBox({ color: [tr, tg, tb], pageNumber }) {
 
 for (const [pdf, expectations] of Object.entries(byPdf)) {
   test(`stamps render in place: ${pdf}`, async () => {
-    const { context, page, frame, errors } = await openSurface(browser, origin, { width: 1100, height: 1000, scale: 3 });
+    const { context, page, frame, errors } = await openSurface(browser, origin, {
+      width: 1100,
+      height: 1000,
+      scale: 3,
+    });
     try {
       const loaded = await loadPdf(page, `${origin}/.golden/${pdf}`);
       assert.equal(loaded.type, 'loaded', JSON.stringify(loaded));
@@ -86,7 +94,10 @@ for (const [pdf, expectations] of Object.entries(byPdf)) {
           }
         }
       }
-      assert.deepEqual(errors.filter((m) => !/favicon|404/.test(m)), []);
+      assert.deepEqual(
+        errors.filter((m) => !/favicon|404/.test(m)),
+        [],
+      );
     } finally {
       await context.close();
     }

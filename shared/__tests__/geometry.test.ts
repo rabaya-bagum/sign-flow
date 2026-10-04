@@ -88,12 +88,24 @@ describe('round trips (property-based)', () => {
 
 describe('helpers', () => {
   it('normalizes rotation angles', () => {
-    expect([0, 90, 180, 270, 360, -90, 450, 89].map(normalizeRotation)).toEqual([0, 90, 180, 270, 0, 270, 90, 90]);
+    expect([0, 90, 180, 270, 360, -90, 450, 89].map(normalizeRotation)).toEqual([
+      0, 90, 180, 270, 0, 270, 90, 90,
+    ]);
   });
 
   it('clamps rects into the page', () => {
-    expect(clampFractionRect({ x: 0.9, y: -0.2, width: 0.3, height: 0.5 })).toEqual({ x: 0.7, y: 0, width: 0.3, height: 0.5 });
-    expect(clampFractionRect({ x: 0.5, y: 0.5, width: 2, height: 2 })).toEqual({ x: 0, y: 0, width: 1, height: 1 });
+    expect(clampFractionRect({ x: 0.9, y: -0.2, width: 0.3, height: 0.5 })).toEqual({
+      x: 0.7,
+      y: 0,
+      width: 0.3,
+      height: 0.5,
+    });
+    expect(clampFractionRect({ x: 0.5, y: 0.5, width: 2, height: 2 })).toEqual({
+      x: 0,
+      y: 0,
+      width: 1,
+      height: 1,
+    });
   });
 
   it('fits an aspect ratio inside a rect, centered', () => {

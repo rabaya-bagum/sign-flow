@@ -26,6 +26,8 @@ jobs:
       - run: npm test -- --ci
       - run: npm run check:surface
       - run: npm run check:dev-routes
+      - run: npm run check:functions
+      - run: npm run audit:deps
 
   backend:
     name: Backend (pgTAP, Edge Function tests)
@@ -41,6 +43,19 @@ jobs:
       # Local stack in Docker (Postgres, Auth, Storage, Mailpit). Studio and analytics aren't needed.
       - run: npx supabase start -x studio,vector,logflare
       - run: npm run db:test
+      # The cron test reaches cron-tick over HTTP (pg_cron → pg_net → functions), so serve them.
+      - name: Serve Edge Functions
+        run: |
+          npx supabase functions serve --env-file supabase/functions/.env.example > functions.log 2>&1 &
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:54321/functions/v1/cron-tick || true)
+            [ "$code" = "401" ] && exit 0
+            sleep 2
+          done
+          cat functions.log
+          exit 1
       - run: npm run test:functions
+      - if: failure()
+        run: cat functions.log || true
       - if: always()
         run: npx supabase stop --no-backup

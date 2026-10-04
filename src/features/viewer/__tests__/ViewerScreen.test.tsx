@@ -74,7 +74,7 @@ describe('ViewerScreen', () => {
     await waitFor(() => expect(mockSurface.props?.url).toBeTruthy());
     await act(async () => mockSurface.props!.onLoaded!({ pageCount: 5, pages: [] }));
     await fireEvent.press(screen.getByTestId('viewer-page'));
-    await fireEvent.press(screen.getByRole('button', { name: 'Page 4' }));
+    await fireEvent.press(screen.getByRole('radio', { name: 'Page 4' }));
     expect(mockSurface.goToPage).toHaveBeenCalledWith(4);
   });
 

@@ -109,7 +109,13 @@ const styles = StyleSheet.create({
     paddingRight: 4,
     minHeight: MIN_TOUCH_TARGET,
   },
-  edit: { paddingHorizontal: 10, minHeight: MIN_TOUCH_TARGET, justifyContent: 'center' },
+  edit: {
+    paddingHorizontal: 10,
+    minHeight: MIN_TOUCH_TARGET,
+    minWidth: MIN_TOUCH_TARGET,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   add: { gap: 4, paddingHorizontal: 12 },
   dot: { width: 10, height: 10, borderRadius: 5 },
 });

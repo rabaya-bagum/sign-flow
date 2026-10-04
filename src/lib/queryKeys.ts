@@ -18,6 +18,20 @@ export const queryKeys = {
     list: () => ['signatures', 'list'] as const,
     imageUrl: (path: string) => ['signatures', 'image-url', path] as const,
   },
+  notifications: {
+    all: ['notifications'] as const,
+    list: () => ['notifications', 'list'] as const,
+    unread: () => ['notifications', 'unread'] as const,
+    prefs: (userId: string) => ['notifications', 'prefs', userId] as const,
+  },
+  activity: {
+    all: ['activity'] as const,
+    feed: (types: readonly string[] | null) => ['activity', 'feed', types] as const,
+    document: (id: string) => ['activity', 'document', id] as const,
+  },
+  security: {
+    factors: () => ['security', 'factors'] as const,
+  },
   /** Signing sessions hold short-lived URLs: never persisted, always refetched on open. */
   signing: (mode: 'account' | 'guest', key: string) => ['signing', mode, key] as const,
   dashboard: {

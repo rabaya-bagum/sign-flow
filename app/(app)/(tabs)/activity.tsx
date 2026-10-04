@@ -1,3 +1,3 @@
-import { ActivityPlaceholderScreen } from '@/features/placeholders/ActivityPlaceholderScreen';
+import { ActivityScreen } from '@/features/activity/ActivityScreen';
 
-export default ActivityPlaceholderScreen;
+export default ActivityScreen;

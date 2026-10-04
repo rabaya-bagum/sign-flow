@@ -1,12 +1,3 @@
-import { PlaceholderScreen } from '@/features/placeholders/PlaceholderScreen';
+import { InboxScreen } from '@/features/notifications/InboxScreen';
 
-export default function NotificationsRoute() {
-  return (
-    <PlaceholderScreen
-      icon="notifications-outline"
-      titleKey="placeholders.notificationsTitle"
-      bodyKey="placeholders.notificationsBody"
-      phase={7}
-    />
-  );
-}
+export default InboxScreen;

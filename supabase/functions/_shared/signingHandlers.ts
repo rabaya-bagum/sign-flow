@@ -36,11 +36,13 @@ const disclosureVersion = z.string().min(1).max(32);
 // --- In-app (signed-in recipient) ---------------------------------------------------------------------
 export const SigningSessionInput = z.object({ document_id: documentId });
 export async function signingSession(input: z.output<typeof SigningSessionInput>, ctx: RequestContext) {
+  await enforceRateLimit(ctx.admin, `session:${ctx.userId}`, 120, 300);
   return openSession(ctx.admin, await resolveAccountSigner(ctx, input.document_id));
 }
 
 export const EsignConsentInput = z.object({ document_id: documentId, disclosure_version: disclosureVersion });
 export async function esignConsent(input: z.output<typeof EsignConsentInput>, ctx: RequestContext) {
+  await enforceRateLimit(ctx.admin, `consent:${ctx.userId}`, 60, 3600);
   await acceptConsent(
     ctx.admin,
     await resolveAccountSigner(ctx, input.document_id),
@@ -57,6 +59,7 @@ export async function submitSigningHandler(input: z.output<typeof SubmitSigningI
 
 export const DeclineInput = z.object({ document_id: documentId, reason });
 export async function decline(input: z.output<typeof DeclineInput>, ctx: RequestContext) {
+  await enforceRateLimit(ctx.admin, `decline:${ctx.userId}`, 20, 3600);
   await declineSigning(ctx.admin, await resolveAccountSigner(ctx, input.document_id), input.reason);
   return { ok: true };
 }

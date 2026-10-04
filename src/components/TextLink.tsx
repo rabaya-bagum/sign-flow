@@ -21,7 +21,7 @@ export function TextLink({ title, onPress, accessibilityHint, role = 'button', t
       accessibilityHint={accessibilityHint}
       hitSlop={8}
       testID={testID}
-      style={{ minHeight: MIN_TOUCH_TARGET, justifyContent: 'center' }}
+      style={{ minHeight: MIN_TOUCH_TARGET, minWidth: MIN_TOUCH_TARGET, justifyContent: 'center' }}
     >
       <AppText variant="subhead" color="primary" weight="600">
         {title}

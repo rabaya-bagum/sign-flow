@@ -21,3 +21,4 @@ export { BottomSheet } from './BottomSheet';
 export { ChipGroup } from './ChipGroup';
 export { ProgressBar } from './ProgressBar';
 export { SearchField } from './SearchField';
+export { SwitchRow } from './SwitchRow';

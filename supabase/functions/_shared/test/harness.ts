@@ -117,3 +117,21 @@ export async function events(documentId: string) {
   if (error) throw error;
   return data;
 }
+
+/** RFC 6238 code for a base32 TOTP secret, as an authenticator app would show it. */
+export async function totp(secret: string, at = Date.now()): Promise<string> {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '';
+  for (const c of secret.replace(/=+$/, '').toUpperCase()) {
+    bits += alphabet.indexOf(c).toString(2).padStart(5, '0');
+  }
+  const key = new Uint8Array(Math.floor(bits.length / 8));
+  for (let i = 0; i < key.length; i++) key[i] = parseInt(bits.slice(i * 8, i * 8 + 8), 2);
+  const counter = new Uint8Array(8);
+  new DataView(counter.buffer).setBigUint64(0, BigInt(Math.floor(at / 30000)));
+  const hmacKey = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+  const mac = new Uint8Array(await crypto.subtle.sign('HMAC', hmacKey, counter));
+  const offset = mac[mac.length - 1]! & 0xf;
+  const code = (new DataView(mac.buffer).getUint32(offset) & 0x7fffffff) % 1_000_000;
+  return code.toString().padStart(6, '0');
+}

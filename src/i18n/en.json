@@ -50,6 +50,8 @@
     "AUTH_LINK_INVALID": "This link is invalid or has expired. Request a new one.",
     "SIGN_IN_CANCELLED": "Sign-in was cancelled.",
     "PROVIDER_UNAVAILABLE": "This sign-in option isn't available on this device.",
+    "REAUTH_REQUIRED": "For your security, sign in again to continue.",
+    "MFA_REQUIRED": "Enter the code from your authenticator app to continue.",
     "FILE_UNSUPPORTED": "This file type isn't supported. Choose a PDF, JPEG or PNG that isn't password-protected.",
     "FILE_TOO_LARGE": "This file is too large. PDFs can be up to 25 MB and 200 pages; images up to 10 MB each.",
     "UPLOAD_FAILED": "The upload didn't finish. Check your connection and try again.",
@@ -145,7 +147,9 @@
     "documentDetails": "Details for {{title}}",
     "emptyTitle": "No documents yet",
     "emptyBody": "You haven't uploaded any documents yet.",
-    "loadError": "We couldn't load your documents."
+    "loadError": "We couldn't load your documents.",
+    "notificationsUnread_one": "Notifications, {{count}} unread",
+    "notificationsUnread_other": "Notifications, {{count}} unread"
   },
   "status": {
     "draft": "Draft",
@@ -163,12 +167,6 @@
     "yesterday": "Yesterday",
     "daysAgo": "{{count}}d ago"
   },
-  "placeholders": {
-    "activityTitle": "Activity",
-    "activityBody": "Activity on your documents will appear here in Phase 7.",
-    "notificationsTitle": "Notifications",
-    "notificationsBody": "No notifications yet. Notifications arrive in Phase 7."
-  },
   "account": {
     "title": "Account",
     "profile": "Profile",
@@ -182,7 +180,7 @@
     "signature": "Signature",
     "security": "Security",
     "changePassword": "Change password",
-    "biometrics": "Face ID / Touch ID",
+    "biometrics": "Biometric unlock",
     "twoFactor": "Two-factor authentication",
     "otherDevices": "Sign out of other devices",
     "notifications": "Notifications",
@@ -214,7 +212,9 @@
     "storageSummary": "{{size}} · {{count}} documents",
     "signaturesRow": "Signatures & initials",
     "signaturesSummary": "{{signatures}} signatures · {{initials}} initials",
-    "signaturesNone": "None saved"
+    "signaturesNone": "None saved",
+    "securityRow": "Password and security",
+    "securitySummary": "Password, two-factor, biometric unlock, devices"
   },
   "dev": {
     "componentsTitle": "Component gallery"
@@ -353,7 +353,8 @@
     "signNow": "Sign now",
     "approveNow": "Review and approve",
     "downloadSigned": "Download signed copy",
-    "downloadCertificate": "Download certificate"
+    "downloadCertificate": "Download certificate",
+    "voidedBanner": "Voided: {{reason}}"
   },
   "search": {
     "title": "Search",
@@ -573,7 +574,7 @@
     "remindersOff": "Off",
     "remindersEvery_one": "Every day",
     "remindersEvery_other": "Every {{count}} days",
-    "remindersHint": "Reminders go out to people who haven't acted yet (from Phase 7).",
+    "remindersHint": "Reminders go out to people who haven't acted yet. You can also remind them yourself from the document.",
     "requireOtp": "Require a one-time code by email to open",
     "requireOtpHint": "Guests confirm their email before seeing the document.",
     "allowDecline": "Allow signers to decline",
@@ -684,5 +685,139 @@
     "otpCode": "6-digit code",
     "otpVerify": "Continue",
     "viewOnly": "You can view this document. There's nothing for you to sign."
+  },
+  "activity": {
+    "title": "Activity",
+    "empty": "Activity on your documents will appear here.",
+    "emptyFiltered": "No activity of this kind yet.",
+    "filterLabel": "Show",
+    "filter_all": "All",
+    "filter_signatures": "Signed",
+    "filter_sent": "Sent",
+    "filter_views": "Viewed",
+    "filter_completed": "Completed",
+    "filter_closed": "Declined & voided",
+    "rowLabel": "{{description}}, {{document}}, {{time}}",
+    "by": "by {{name}}",
+    "loadMore": "Loading more…",
+    "timeline": "Activity",
+    "timelineEmpty": "No activity yet.",
+    "showAll": "Show all activity ({{count}})",
+    "showLess": "Show less"
+  },
+  "inbox": {
+    "title": "Notifications",
+    "empty": "No notifications yet.",
+    "markAllRead": "Mark all as read",
+    "unread": "Unread",
+    "itemLabel": "{{title}}, {{body}}, {{time}}",
+    "itemUnread": "unread"
+  },
+  "notificationPrefs": {
+    "title": "Notifications",
+    "channels": "Channels",
+    "email": "Email",
+    "emailHint": "Updates by email. Signature requests sent to your email address always arrive.",
+    "push": "Push notifications",
+    "pushHint": "Alerts on this device.",
+    "pushUnavailable": "Push notifications aren't available on this device or build.",
+    "pushDenied": "Push notifications are turned off for SignFlow in your device settings.",
+    "openSettings": "Open settings",
+    "topics": "What to tell you about",
+    "topic_requests": "Signature requests",
+    "topic_requestsHint": "Documents sent to you to sign or approve",
+    "topic_reminders": "Reminders",
+    "topic_remindersHint": "Reminders and documents that expire soon",
+    "topic_completed": "Completed and closed documents",
+    "topic_completedHint": "Completed, declined, voided and expired",
+    "topic_activity": "Activity on documents you sent",
+    "topic_activityHint": "When someone opens or signs",
+    "inAppNote": "Everything also appears in your in-app notifications."
+  },
+  "defaultSigning": {
+    "title": "Default signing settings",
+    "intro": "Used for new documents. You can change them for each document before sending.",
+    "expiry": "Documents expire after",
+    "reminders": "Remind signers",
+    "saved": "Saved"
+  },
+  "lifecycle": {
+    "remind": "Remind",
+    "remindAll": "Remind everyone",
+    "remindOne": "Remind {{name}}",
+    "remindHint": "Emails a new signing link. Each person can be reminded once a day.",
+    "reminded": "Reminder sent.",
+    "remindedMany": "Reminders sent: {{count}}.",
+    "remindSkipped": "Some people were reminded in the last 24 hours and were skipped.",
+    "void": "Void document",
+    "voidTitle": "Void this document?",
+    "voidBody": "Signing links stop working and the document can't be completed. Everyone who was asked to sign is told, with your reason.",
+    "voidReason": "Reason",
+    "voidReasonHint": "Required. Recipients will see it.",
+    "voidConfirm": "Void",
+    "voided": "Document voided.",
+    "recipientActions": "Actions for {{name}}"
+  },
+  "security": {
+    "on": "On",
+    "off": "Off",
+    "biometricsHint": "Ask for Face ID, Touch ID or your fingerprint when opening SignFlow.",
+    "biometricsUnsupported": "Not available on this device.",
+    "biometricsNotEnrolled": "Set up Face ID, Touch ID or a fingerprint in your device settings first.",
+    "otherDevicesHint": "Signs out SignFlow everywhere except this device. Use it if you lost a phone or signed in on a shared computer.",
+    "otherDevicesConfirm": "Every other device will need to sign in again.",
+    "signOutOthers": "Sign out others",
+    "otherDevicesDone": "Other devices have been signed out.",
+    "reauthCodeSent": "For your security, we emailed you a code. Enter it below to change your password.",
+    "reauthCode": "Code from the email",
+    "deleteGoesTitle": "What we delete",
+    "deleteGoes": [
+      "Your profile photo, phone number and preferences",
+      "Your saved signatures and initials",
+      "Your drafts and uploads",
+      "Documents nobody else is part of",
+      "Your notifications and devices"
+    ],
+    "deleteStaysTitle": "What other people keep",
+    "deleteStays": [
+      "Documents you sent or signed with other people stay available to them, with your name and email as signer or sender, as the law requires.",
+      "Documents you sent that are still waiting for signatures are cancelled, and everyone involved is told."
+    ],
+    "deletePassword": "Enter your password to confirm",
+    "reauthApple": "Sign in again with Apple",
+    "reauthGoogle": "Sign in again with Google",
+    "deleteConfirmTitle": "Delete your account?",
+    "deleteConfirmBody": "This can't be undone. You'll be signed out on all devices.",
+    "deleteConfirm": "Delete permanently"
+  },
+  "twoFactor": {
+    "challengeTitle": "Two-factor authentication",
+    "challengeBody": "Enter the 6-digit code from your authenticator app.",
+    "codeLabel": "6-digit code",
+    "verify": "Verify",
+    "useOtherAccount": "Sign out",
+    "offTitle": "Add a second step to sign-in",
+    "offBody": "After your password, SignFlow will ask for a code from an authenticator app such as 1Password, Google Authenticator or Authy.",
+    "setUp": "Set up authenticator app",
+    "scanTitle": "Scan this code",
+    "scanBody": "Scan the QR code with your authenticator app, then enter the 6-digit code it shows.",
+    "qrLabel": "QR code for your authenticator app",
+    "openApp": "Open authenticator app",
+    "manualKey": "Can't scan? Enter this key in the app:",
+    "confirm": "Turn on",
+    "enabled": "Two-factor authentication is on.",
+    "disabled": "Two-factor authentication is off.",
+    "onTitle": "Two-factor authentication is on",
+    "onBody": "Signing in needs your password and a code from your authenticator app.",
+    "turnOff": "Turn off",
+    "turnOffTitle": "Turn off two-factor authentication?",
+    "turnOffBody": "Signing in will only need your password."
+  },
+  "appLock": {
+    "title": "SignFlow is locked",
+    "body": "Unlock to continue.",
+    "unlock": "Unlock",
+    "prompt": "Unlock SignFlow",
+    "enablePrompt": "Confirm to turn on biometric unlock"
   }
 }

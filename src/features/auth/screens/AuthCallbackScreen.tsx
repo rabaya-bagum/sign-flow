@@ -60,7 +60,11 @@ export function AuthCallbackScreen() {
         </View>
       ) : (
         <View style={styles.working} accessibilityLiveRegion="polite">
-          <ActivityIndicator color={theme.colors.primary} size="large" />
+          <ActivityIndicator
+            color={theme.colors.primary}
+            size="large"
+            accessibilityLabel={t('common.loading')}
+          />
           <AppText variant="callout" color="textSecondary">
             {t('auth.callbackWorking')}
           </AppText>

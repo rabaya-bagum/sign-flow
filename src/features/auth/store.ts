@@ -1,7 +1,10 @@
 import type { Session } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
-export type AuthStatus = 'loading' | 'signedOut' | 'signedIn';
+import { needsSecondFactor } from './session';
+
+/** 'mfaRequired': signed in with the first factor; the authenticator code is still owed (SPEC §5.10). */
+export type AuthStatus = 'loading' | 'signedOut' | 'mfaRequired' | 'signedIn';
 
 interface AuthState {
   status: AuthStatus;
@@ -17,7 +20,11 @@ export const useAuthStore = create<AuthState>()((set) => ({
   status: 'loading',
   session: null,
   recovering: false,
-  setSession: (session) => set({ session, status: session ? 'signedIn' : 'signedOut' }),
+  setSession: (session) =>
+    set({
+      session,
+      status: !session ? 'signedOut' : needsSecondFactor(session) ? 'mfaRequired' : 'signedIn',
+    }),
   setRecovering: (recovering) => set({ recovering }),
 }));
 

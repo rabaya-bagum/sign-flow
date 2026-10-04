@@ -90,7 +90,7 @@ describe('DocumentsScreen', () => {
     await renderWithProviders(<DocumentsScreen />);
     await screen.findByText('Mutual NDA.pdf');
     expect(lastParams().bucket).toBe('waiting');
-    expect(screen.getByRole('radio', { name: 'Waiting' })).toBeSelected();
+    expect(screen.getByRole('radio', { name: 'Waiting' })).toBeChecked();
     await fireEvent.press(screen.getByRole('radio', { name: 'Closed' }));
     await waitFor(() => expect(lastParams().bucket).toBe('closed'));
   });

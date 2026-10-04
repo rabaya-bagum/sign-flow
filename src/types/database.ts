@@ -336,6 +336,7 @@ export type Database = {
           email_message: string | null;
           email_subject: string | null;
           expires_at: string | null;
+          expiry_warned_at: string | null;
           file_size_bytes: number | null;
           id: string;
           original_path: string | null;
@@ -364,6 +365,7 @@ export type Database = {
           email_message?: string | null;
           email_subject?: string | null;
           expires_at?: string | null;
+          expiry_warned_at?: string | null;
           file_size_bytes?: number | null;
           id?: string;
           original_path?: string | null;
@@ -392,6 +394,7 @@ export type Database = {
           email_message?: string | null;
           email_subject?: string | null;
           expires_at?: string | null;
+          expiry_warned_at?: string | null;
           file_size_bytes?: number | null;
           id?: string;
           original_path?: string | null;
@@ -526,12 +529,68 @@ export type Database = {
           },
         ];
       };
+      notifications: {
+        Row: {
+          body: string;
+          created_at: string;
+          document_id: string | null;
+          id: string;
+          read_at: string | null;
+          title: string;
+          type: string;
+          user_id: string;
+        };
+        Insert: {
+          body: string;
+          created_at?: string;
+          document_id?: string | null;
+          id?: string;
+          read_at?: string | null;
+          title: string;
+          type: string;
+          user_id: string;
+        };
+        Update: {
+          body?: string;
+          created_at?: string;
+          document_id?: string | null;
+          id?: string;
+          read_at?: string | null;
+          title?: string;
+          type?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'notifications_document_id_fkey';
+            columns: ['document_id'];
+            isOneToOne: false;
+            referencedRelation: 'documents';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'notifications_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'notifications_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'public_profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       profiles: {
         Row: {
           avatar_path: string | null;
           created_at: string;
           default_expiry_days: number;
           default_reminder: NonNullable<Json>;
+          deleted_at: string | null;
           email: string;
           full_name: string;
           id: string;
@@ -546,6 +605,7 @@ export type Database = {
           created_at?: string;
           default_expiry_days?: number;
           default_reminder?: NonNullable<Json>;
+          deleted_at?: string | null;
           email: string;
           full_name: string;
           id: string;
@@ -560,6 +620,7 @@ export type Database = {
           created_at?: string;
           default_expiry_days?: number;
           default_reminder?: NonNullable<Json>;
+          deleted_at?: string | null;
           email?: string;
           full_name?: string;
           id?: string;
@@ -570,6 +631,45 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [];
+      };
+      push_tokens: {
+        Row: {
+          expo_push_token: string;
+          id: string;
+          platform: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          expo_push_token: string;
+          id?: string;
+          platform: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          expo_push_token?: string;
+          id?: string;
+          platform?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'push_tokens_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'push_tokens_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'public_profiles';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       rate_limits: {
         Row: {
@@ -759,8 +859,29 @@ export type Database = {
         Args: { p_key: string; p_max: number; p_window_seconds: number };
         Returns: boolean;
       };
+      claim_due_reminders: {
+        Args: { p_now?: string };
+        Returns: {
+          document_id: string;
+          email: string;
+          name: string;
+          recipient_id: string;
+          role: Database['public']['Enums']['recipient_role'];
+          user_id: string;
+        }[];
+      };
+      claim_expiry_warnings: {
+        Args: { p_now?: string };
+        Returns: {
+          document_id: string;
+          expires_at: string;
+          title: string;
+        }[];
+      };
+      claim_manual_reminder: { Args: { p_owner_id: string; p_recipient_id: string }; Returns: string };
       complete_recipient: { Args: { p_recipient_id: string; p_values: Json }; Returns: Json };
       decline_recipient: { Args: { p_reason: string; p_recipient_id: string }; Returns: undefined };
+      delete_account_data: { Args: { p_user_id: string }; Returns: Json };
       document_display_status: {
         Args: {
           p_current_signing_order: number;
@@ -768,6 +889,14 @@ export type Database = {
           p_status: Database['public']['Enums']['document_status'];
         };
         Returns: string;
+      };
+      expire_due_documents: {
+        Args: { p_now?: string };
+        Returns: {
+          document_id: string;
+          owner_id: string;
+          title: string;
+        }[];
       };
       finalize_original_upload: {
         Args: {
@@ -822,6 +951,24 @@ export type Database = {
       is_draft_owner: { Args: { p_document_id: string }; Returns: boolean };
       like_pattern: { Args: { p_text: string }; Returns: string };
       link_recipients_to_user: { Args: Record<PropertyKey, never>; Returns: number };
+      list_activity: {
+        Args: {
+          p_before_created_at?: string;
+          p_before_id?: number;
+          p_limit?: number;
+          p_types?: Database['public']['Enums']['event_type'][];
+        };
+        Returns: {
+          actor_email: string;
+          actor_name: string;
+          created_at: string;
+          description: string;
+          document_id: string;
+          document_title: string;
+          id: number;
+          type: Database['public']['Enums']['event_type'];
+        }[];
+      };
       list_document_senders: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -920,6 +1067,7 @@ export type Database = {
       };
       request_header: { Args: { p_name: string }; Returns: string };
       request_ip: { Args: Record<PropertyKey, never>; Returns: unknown };
+      run_cron_tick: { Args: Record<PropertyKey, never>; Returns: number };
       save_document_fields: { Args: { p_document_id: string; p_fields: Json }; Returns: number };
       search_documents: {
         Args: { p_query: string };
@@ -954,6 +1102,27 @@ export type Database = {
       };
       set_default_signature: { Args: { p_id: string }; Returns: undefined };
       shares_document_with: { Args: { p_profile_id: string }; Returns: boolean };
+      stale_tmp_uploads: {
+        Args: { p_limit?: number; p_older_than?: string };
+        Returns: {
+          name: string;
+        }[];
+      };
+      stalled_finalizations: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          document_id: string;
+        }[];
+      };
+      void_document: {
+        Args: { p_document_id: string; p_owner_id: string; p_reason: string };
+        Returns: {
+          email: string;
+          name: string;
+          recipient_id: string;
+          user_id: string;
+        }[];
+      };
     };
     Enums: {
       document_status: 'draft' | 'in_progress' | 'completed' | 'declined' | 'expired' | 'voided';

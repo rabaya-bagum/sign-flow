@@ -14,6 +14,7 @@ import {
   Screen,
   SectionHeader,
 } from '@/components';
+import { useUnreadCount } from '@/features/notifications/hooks';
 import { useAppErrorMessage } from '@/hooks/useAppErrorMessage';
 import { useTheme } from '@/theme';
 
@@ -27,6 +28,7 @@ export function HomeScreen() {
   const { t } = useTranslation();
   const errorMessage = useAppErrorMessage();
   const summary = useDashboardSummary();
+  const unread = useUnreadCount();
   const recent = useRecentDocuments();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -72,8 +74,12 @@ export function HomeScreen() {
         />
         <IconButton
           icon="notifications-outline"
-          accessibilityLabel={t('home.notifications')}
+          accessibilityLabel={
+            unread.data ? t('home.notificationsUnread', { count: unread.data }) : t('home.notifications')
+          }
+          badge={Boolean(unread.data)}
           onPress={() => router.push('/notifications')}
+          testID="home-notifications"
         />
       </View>
 

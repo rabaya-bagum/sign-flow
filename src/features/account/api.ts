@@ -78,3 +78,23 @@ export async function avatarSignedUrl(path: string): Promise<string> {
   if (error) throw toAppError(error);
   return data.signedUrl;
 }
+
+/** Default expiry and reminder interval for new documents (SPEC §5.10, §11). */
+export async function updateSigningDefaults(
+  userId: string,
+  values: { expiryDays: number; reminderDays: number | null },
+): Promise<Profile> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({
+      default_expiry_days: values.expiryDays,
+      default_reminder: values.reminderDays
+        ? { first_after_days: values.reminderDays, repeat_every_days: values.reminderDays }
+        : { first_after_days: null, repeat_every_days: null },
+    })
+    .eq('id', userId)
+    .select('*')
+    .single();
+  if (error) throw toAppError(error);
+  return data;
+}

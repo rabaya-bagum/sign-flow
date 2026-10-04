@@ -263,7 +263,7 @@ export function FieldEditorScreen() {
           <>
             <AppText
               variant="caption"
-              color={autosave.status === 'error' ? 'danger' : 'textTertiary'}
+              color={autosave.status === 'error' ? 'danger' : 'textSecondary'}
               testID="editor-save-status"
             >
               {statusText}

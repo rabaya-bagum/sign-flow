@@ -95,7 +95,9 @@ export function UploadPane({ uri, onPick, threshold, onChangeThreshold, onError 
           />
         ) : null}
       </View>
-      {busy ? <ActivityIndicator color={theme.colors.textSecondary} /> : null}
+      {busy ? (
+        <ActivityIndicator color={theme.colors.textSecondary} accessibilityLabel={t('common.loading')} />
+      ) : null}
       {current && preview ? (
         <>
           <View

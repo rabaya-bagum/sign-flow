@@ -50,7 +50,7 @@ export function SearchField({
 
 const styles = StyleSheet.create({
   box: { flexDirection: 'row', alignItems: 'center', paddingLeft: 12, minHeight: MIN_TOUCH_TARGET },
-  input: { flex: 1, paddingHorizontal: 8, paddingVertical: 10 },
+  input: { flex: 1, minHeight: MIN_TOUCH_TARGET, paddingHorizontal: 8, paddingVertical: 10 },
   clear: {
     width: MIN_TOUCH_TARGET,
     height: MIN_TOUCH_TARGET,

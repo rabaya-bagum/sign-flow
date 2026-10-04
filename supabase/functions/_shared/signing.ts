@@ -16,13 +16,14 @@ import type { RequestContext } from './context.ts';
 import { base64ToBytes, bytesToBase64 } from './crypto.ts';
 import type { SupabaseClient } from './deps.ts';
 import { emailProvider } from './email/provider.ts';
-import { declinedEmail } from './email/templates.ts';
+import { declinedEmail, noticeEmail } from './email/templates.ts';
 import { type Actor, actorFor, logEventAs } from './events.ts';
 import { finalizeDocument } from './finalize.ts';
 import { HttpError } from './http.ts';
+import { deliver, type Notice } from './notifications.ts';
 import { type ActivatedRecipient, notifyActivated } from './notify.ts';
 import { enforceRateLimit } from './rateLimit.ts';
-import { hashToken, issueDownloadToken } from './tokens.ts';
+import { documentLink, hashToken, issueDownloadToken } from './tokens.ts';
 
 /**
  * Signing core shared by the in-app functions (signing-session, esign-consent, submit-signing,
@@ -354,6 +355,17 @@ export async function openSession(admin: SupabaseClient, signer: Signer): Promis
 
   if (await admin.rpc('mark_recipient_viewed', { p_recipient_id: r.id }).then((res) => res.data === true)) {
     session.recipient.status = 'viewed';
+    if (r.user_id !== doc.owner_id) {
+      await deliver(admin, [
+        {
+          userId: doc.owner_id,
+          documentId: doc.id,
+          type: 'viewed',
+          title: `${r.name} opened your document`,
+          body: doc.title,
+        },
+      ]);
+    }
   }
   await logView(admin, signer);
   const [{ data: pages, error: pError }, signed] = await Promise.all([
@@ -526,6 +538,34 @@ export async function submitSigning(
       { method: authMethod(signer), fields: rows.length },
     );
 
+    if (r.user_id !== doc.owner_id) {
+      const { data: owner } = await admin
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', doc.owner_id)
+        .single();
+      const verb = approved ? 'approved' : 'signed';
+      await deliver(admin, [
+        {
+          userId: doc.owner_id,
+          documentId: doc.id,
+          type: 'signed',
+          title: `${r.name} ${verb}`,
+          body: doc.title,
+          email: owner?.email
+            ? noticeEmail({
+                recipientName: owner.full_name ?? '',
+                recipientEmail: owner.email,
+                subject: `${r.name} ${verb} "${doc.title}"`,
+                heading: `${r.name} ${verb} your document`,
+                lines: [doc.title],
+                link: { href: documentLink(doc.id), label: 'Open in SignFlow' },
+              })
+            : undefined,
+        },
+      ]);
+    }
+
     if (result.activated.length > 0 && doc.expires_at) {
       await notifyActivated(admin, signer.actor, { ...doc, expires_at: doc.expires_at }, result.activated);
     }
@@ -585,6 +625,35 @@ export async function declineSigning(admin: SupabaseClient, signer: Signer, reas
       .neq('role', 'cc')
       .neq('status', 'pending'),
   ]);
+  const notices: Notice[] = [
+    {
+      userId: doc.owner_id,
+      documentId: doc.id,
+      type: 'declined',
+      title: `${r.name} declined`,
+      body: doc.title,
+    },
+  ];
+  const { data: linked } = await admin
+    .from('document_recipients')
+    .select('user_id')
+    .eq('document_id', doc.id)
+    .neq('id', r.id)
+    .neq('role', 'cc')
+    .neq('status', 'pending')
+    .not('user_id', 'is', null);
+  for (const l of linked ?? []) {
+    if (l.user_id && l.user_id !== doc.owner_id) {
+      notices.push({
+        userId: l.user_id,
+        documentId: doc.id,
+        type: 'declined',
+        title: `${r.name} declined`,
+        body: doc.title,
+      });
+    }
+  }
+  await deliver(admin, notices);
   const people = [
     ...(owner?.email ? [{ name: owner.full_name ?? '', email: owner.email as string }] : []),
     ...(others ?? [])

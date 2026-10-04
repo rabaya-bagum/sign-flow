@@ -10,7 +10,7 @@ export function ParticipantStack({ participants, total }: { participants: Partic
   const { t } = useTranslation();
   if (total === 0) {
     return (
-      <AppText variant="footnote" color="textTertiary">
+      <AppText variant="footnote" color="textSecondary">
         {t('documents.noParticipants')}
       </AppText>
     );

@@ -29,7 +29,10 @@ export function errorResponse(error: unknown): Response {
   if (error instanceof HttpError) {
     return json({ error: { code: error.code, message: error.message } }, error.status);
   }
-  // Unexpected: log server-side, never leak internals to the client.
-  console.error(error);
+  // Unexpected: log server-side, never leak internals to the client. Only the name, message and stack
+  // are logged, never the whole object (it can carry request data).
+  console.error(
+    error instanceof Error ? (error.stack ?? `${error.name}: ${error.message}`) : 'Non-error thrown',
+  );
   return json({ error: { code: 'UNKNOWN', message: 'Unexpected error' } }, 500);
 }

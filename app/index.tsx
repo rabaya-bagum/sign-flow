@@ -11,6 +11,7 @@ export default function Index() {
 
   if (recovering) return <Redirect href="/reset-password" />;
   if (status === 'signedIn') return <Redirect href="/home" />;
+  if (status === 'mfaRequired') return <Redirect href="/two-factor" />;
   if (!onboardingSeen) return <Redirect href="/onboarding" />;
   return <Redirect href="/welcome" />;
 }

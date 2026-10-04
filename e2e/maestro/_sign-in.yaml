@@ -1,0 +1,22 @@
+# Subflow: fresh install → onboarding skipped → signed in on Home. Needs EMAIL and PASSWORD.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: onboarding-skip
+- tapOn:
+    id: welcome-sign-in
+- tapOn:
+    id: sign-in-email
+- inputText: ${EMAIL}
+- tapOn:
+    id: sign-in-password
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: sign-in-submit
+- extendedWaitUntil:
+    visible:
+      id: home-screen
+    timeout: 20000

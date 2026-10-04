@@ -17,6 +17,12 @@ const AUTH_CODE_MAP: Record<string, AppErrorCode> = {
   otp_expired: 'AUTH_LINK_INVALID',
   bad_code_verifier: 'AUTH_LINK_INVALID',
   validation_failed: 'AUTH_LINK_INVALID',
+  // Re-authentication and two-factor (SPEC §5.10).
+  reauthentication_needed: 'REAUTH_REQUIRED',
+  reauthentication_not_valid: 'OTP_INVALID',
+  mfa_verification_failed: 'OTP_INVALID',
+  mfa_challenge_expired: 'OTP_INVALID',
+  insufficient_aal: 'MFA_REQUIRED',
 };
 
 function hasStringCode(value: unknown): value is { code: string; message?: string } {

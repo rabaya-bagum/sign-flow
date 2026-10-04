@@ -1,11 +1,13 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 
+import { setMonitoringUser } from '@/lib/monitoring';
 import { queryClient } from '@/lib/queryClient';
 import { supabase } from '@/lib/supabase';
 
 import { clearLocalUserData } from './localData';
 import { linkRecipientsToUser } from './api';
 import { useAuthStore } from './store';
+import { useAppLockStore } from '@/features/security/appLock';
 
 /** Mirrors Supabase auth state into the auth store and runs per-sign-in side effects. */
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -26,12 +28,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         void clearLocalUserData();
       }
       if (userId) lastUser.current = userId;
+      setMonitoringUser(userId);
 
       if (event === 'SIGNED_OUT') {
         setRecovering(false);
         linkedFor.current = null;
         lastUser.current = null;
         queryClient.clear();
+        // Biometric unlock is per device and account: the next account opts in itself.
+        useAppLockStore.getState().setEnabled(false);
       }
 
       if (userId && linkedFor.current !== userId && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {

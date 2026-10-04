@@ -10,6 +10,24 @@ export interface RequestContext {
   asUser: SupabaseClient;
   ip: string | null;
   userAgent: string | null;
+  /** Assurance level of the session: 'aal2' after a second factor (SPEC §5.10 2FA). */
+  aal: string | null;
+  /** Unix seconds of the latest sign-in or factor check in this session (JWT `amr`). */
+  authenticatedAt: number | null;
+}
+
+/** Reads the JWT payload. Only call after the token has been verified (auth.getUser). */
+function jwtClaims(token: string): { aal?: string; amr?: { timestamp?: number }[] } {
+  try {
+    const part = token.split('.')[1] ?? '';
+    const b64 = part
+      .replace(/-/g, '+')
+      .replace(/_/g, '/')
+      .padEnd(Math.ceil(part.length / 4) * 4, '=');
+    return JSON.parse(atob(b64));
+  } catch {
+    return {};
+  }
 }
 
 function env(name: string): string {
@@ -45,6 +63,12 @@ export async function requestContext(req: Request): Promise<RequestContext> {
   const admin = adminClient();
   const { data, error } = await admin.auth.getUser(token);
   if (error || !data.user) throw new HttpError('FORBIDDEN', 401, 'Invalid access token');
+  const claims = jwtClaims(token);
+  // Two-factor (SPEC §5.10): with a verified factor, only sessions that passed it may act.
+  if ((data.user.factors ?? []).some((f) => f.status === 'verified') && claims.aal !== 'aal2') {
+    throw new HttpError('MFA_REQUIRED', 403, 'Two-factor verification required');
+  }
+  const times = (claims.amr ?? []).map((a) => a.timestamp ?? 0).filter((t) => t > 0);
   return {
     userId: data.user.id,
     userEmail: data.user.email ?? null,
@@ -52,5 +76,7 @@ export async function requestContext(req: Request): Promise<RequestContext> {
     asUser: userClient(token),
     ip: clientIp(req),
     userAgent: req.headers.get('user-agent'),
+    aal: claims.aal ?? null,
+    authenticatedAt: times.length ? Math.max(...times) : null,
   };
 }

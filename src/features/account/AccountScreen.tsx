@@ -69,7 +69,6 @@ export function AccountScreen() {
     if (uri) avatar.upload.mutate(uri, { onError: (e) => Alert.alert(t('errors.title'), errorMessage(e)) });
   };
   const [loggingOut, setLoggingOut] = useState(false);
-  const comingIn = (phase: number) => t('common.comingInPhase', { phase });
 
   const logout = async () => {
     setLoggingOut(true);
@@ -150,14 +149,22 @@ export function AccountScreen() {
       </Section>
 
       <Section title={t('account.security')}>
-        <ListRow title={t('account.changePassword')} subtitle={comingIn(8)} disabled separator />
-        <ListRow title={t('account.biometrics')} subtitle={comingIn(8)} disabled separator />
-        <ListRow title={t('account.twoFactor')} subtitle={comingIn(8)} disabled separator />
-        <ListRow title={t('account.otherDevices')} subtitle={comingIn(8)} disabled />
+        <ListRow
+          title={t('account.securityRow')}
+          subtitle={t('account.securitySummary')}
+          icon="lock-closed-outline"
+          iconColor="primary"
+          onPress={() => router.push('/account/security')}
+          testID="account-security"
+        />
       </Section>
 
       <Section title={t('account.notifications')}>
-        <ListRow title={t('account.notificationSettings')} subtitle={comingIn(7)} disabled />
+        <ListRow
+          title={t('account.notificationSettings')}
+          onPress={() => router.push('/account/notifications')}
+          testID="account-notifications"
+        />
       </Section>
 
       <Section title={t('account.preferences')}>
@@ -169,7 +176,11 @@ export function AccountScreen() {
           testID="account-theme"
         />
         <ListRow title={t('account.language')} value={t('account.languageEnglish')} separator />
-        <ListRow title={t('account.defaultSigning')} subtitle={comingIn(5)} disabled />
+        <ListRow
+          title={t('account.defaultSigning')}
+          onPress={() => router.push('/account/default-signing')}
+          testID="account-default-signing"
+        />
       </Section>
 
       <Section title={t('account.storage')}>
@@ -214,7 +225,14 @@ export function AccountScreen() {
       </Section>
 
       <Section title={t('account.deleteAccount')}>
-        <ListRow title={t('account.deleteAccount')} subtitle={comingIn(8)} titleColor="danger" disabled />
+        <ListRow
+          title={t('account.deleteAccount')}
+          icon="trash-outline"
+          iconColor="danger"
+          titleColor="danger"
+          onPress={() => router.push('/account/delete')}
+          testID="account-delete"
+        />
       </Section>
 
       <AppButton

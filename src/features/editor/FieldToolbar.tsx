@@ -36,7 +36,7 @@ export function FieldToolbar({
             key={type}
             onPress={() => onSelect(active ? null : type)}
             accessibilityRole="button"
-            aria-selected={active}
+            aria-pressed={active}
             accessibilityLabel={t(`editor.type_${type}`)}
             accessibilityHint={t('editor.toolHint')}
             testID={`tool-${type}`}

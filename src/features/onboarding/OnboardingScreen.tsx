@@ -56,6 +56,8 @@ export function OnboardingScreen() {
         ref={listRef}
         data={CARDS}
         horizontal
+        // Keyboard users can focus the pager and scroll it with the arrow keys (web).
+        tabIndex={0}
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={onScrollEnd}
@@ -84,7 +86,11 @@ export function OnboardingScreen() {
         <View
           style={styles.dots}
           accessible
-          accessibilityRole="text"
+          accessibilityRole="progressbar"
+          aria-valuemin={1}
+          aria-valuemax={CARDS.length}
+          aria-valuenow={index + 1}
+          aria-valuetext={t('onboarding.pageIndicator', { current: index + 1, total: CARDS.length })}
           accessibilityLabel={t('onboarding.pageIndicator', { current: index + 1, total: CARDS.length })}
         >
           {CARDS.map((card, i) => (

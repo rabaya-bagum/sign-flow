@@ -10,6 +10,7 @@ export const palette = {
     border: '#E4E7EC',
     textPrimary: '#1F2328',
     textSecondary: '#5B6270',
+    // Disabled and decorative only (3.2:1 on white): readable text uses textSecondary (≥ 4.5:1).
     textTertiary: '#8A919E',
     primary: '#2B59D9',
     primaryPressed: '#2349B5',

@@ -195,7 +195,6 @@ function SignatureSheetBody({ kind, defaultName, onComplete, onClose, guest = fa
                 <Pressable
                   key={row.id}
                   accessibilityRole="radio"
-                  aria-selected={isSelected}
                   aria-checked={isSelected}
                   accessibilityLabel={
                     t('signatures.savedItemLabel', {

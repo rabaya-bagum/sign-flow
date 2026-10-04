@@ -1,0 +1,35 @@
+-- Shared fixtures for pgTAP tests. Included by each test file with \ir; runs as postgres
+-- inside the test's transaction, so everything is rolled back afterwards.
+--
+--   A  owner of all fixture documents
+--   B  signer, order 1 (active)         C  signer, order 2 (pending)
+--   D  CC on the in-progress and completed documents
+--   E  stranger with no relationship to any document
+
+insert into auth.users (instance_id, id, aud, role, email, email_confirmed_at, raw_user_meta_data)
+values
+  ('00000000-0000-0000-0000-000000000000', 'aaaaaaaa-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'a@test.local', now(), '{"full_name":"User A"}'),
+  ('00000000-0000-0000-0000-000000000000', 'bbbbbbbb-0000-4000-8000-000000000002', 'authenticated', 'authenticated', 'b@test.local', now(), '{"full_name":"User B"}'),
+  ('00000000-0000-0000-0000-000000000000', 'cccccccc-0000-4000-8000-000000000003', 'authenticated', 'authenticated', 'c@test.local', now(), '{"full_name":"User C"}'),
+  ('00000000-0000-0000-0000-000000000000', 'dddddddd-0000-4000-8000-000000000004', 'authenticated', 'authenticated', 'd@test.local', now(), '{"full_name":"User D"}'),
+  ('00000000-0000-0000-0000-000000000000', 'eeeeeeee-0000-4000-8000-000000000005', 'authenticated', 'authenticated', 'e@test.local', now(), '{"full_name":"User E"}');
+
+insert into public.documents (id, owner_id, title, status, current_signing_order)
+values
+  ('d0000000-0000-4000-8000-0000000000d1', 'aaaaaaaa-0000-4000-8000-000000000001', 'A draft', 'draft', null),
+  ('d0000000-0000-4000-8000-0000000000d2', 'aaaaaaaa-0000-4000-8000-000000000001', 'A in progress', 'in_progress', 1),
+  ('d0000000-0000-4000-8000-0000000000d3', 'aaaaaaaa-0000-4000-8000-000000000001', 'A completed', 'completed', 1);
+
+insert into public.document_recipients (document_id, user_id, name, email, role, signing_order, status)
+values
+  ('d0000000-0000-4000-8000-0000000000d1', 'bbbbbbbb-0000-4000-8000-000000000002', 'User B', 'b@test.local', 'signer', 1, 'pending'),
+  ('d0000000-0000-4000-8000-0000000000d2', 'bbbbbbbb-0000-4000-8000-000000000002', 'User B', 'b@test.local', 'signer', 1, 'sent'),
+  ('d0000000-0000-4000-8000-0000000000d2', 'cccccccc-0000-4000-8000-000000000003', 'User C', 'c@test.local', 'signer', 2, 'pending'),
+  ('d0000000-0000-4000-8000-0000000000d2', 'dddddddd-0000-4000-8000-000000000004', 'User D', 'd@test.local', 'cc', 1, 'pending'),
+  ('d0000000-0000-4000-8000-0000000000d3', 'bbbbbbbb-0000-4000-8000-000000000002', 'User B', 'b@test.local', 'signer', 1, 'signed'),
+  ('d0000000-0000-4000-8000-0000000000d3', 'dddddddd-0000-4000-8000-000000000004', 'User D', 'd@test.local', 'cc', 1, 'sent');
+
+insert into public.document_events (document_id, type, description)
+values
+  ('d0000000-0000-4000-8000-0000000000d2', 'DOCUMENT_SENT', 'Signature request sent'),
+  ('d0000000-0000-4000-8000-0000000000d3', 'DOCUMENT_COMPLETED', 'Document completed');

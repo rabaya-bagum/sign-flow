@@ -39,3 +39,6 @@ coverage/
 
 # Golden test outputs
 .golden/
+
+# Skia web runtime, copied from canvaskit-wasm by `npm install` (postinstall)
+public/canvaskit.wasm

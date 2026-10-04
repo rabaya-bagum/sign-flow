@@ -7,6 +7,8 @@ export interface DocumentRow {
   title: string;
   status: string;
   original_path: string | null;
+  completed_path: string | null;
+  certificate_path: string | null;
   original_sha256: string | null;
   file_size_bytes: number | null;
   page_count: number | null;
@@ -14,7 +16,7 @@ export interface DocumentRow {
 }
 
 const COLUMNS =
-  'id, owner_id, title, status, original_path, original_sha256, file_size_bytes, page_count, deleted_at';
+  'id, owner_id, title, status, original_path, completed_path, certificate_path, original_sha256, file_size_bytes, page_count, deleted_at';
 
 /**
  * Loads a document the caller can see under RLS (owner or active participant). Documents the caller

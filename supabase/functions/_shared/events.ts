@@ -1,4 +1,5 @@
 import type { RequestContext } from './context.ts';
+import type { SupabaseClient } from './deps.ts';
 
 export type EventType =
   | 'DOCUMENT_UPLOADED'
@@ -47,6 +48,55 @@ export async function logDocumentView(ctx: RequestContext, documentId: string): 
   return data === true;
 }
 
+/** Who an event is attributed to (SPEC §12.1). Guests have a recipient id and no user id. */
+export interface Actor {
+  userId: string | null;
+  recipientId: string | null;
+  name: string | null;
+  email: string | null;
+  ip: string | null;
+  userAgent: string | null;
+}
+
+/** System events (completion, finalization): no person, no request. */
+export const SYSTEM_ACTOR: Actor = {
+  userId: null,
+  recipientId: null,
+  name: 'SignFlow',
+  email: null,
+  ip: null,
+  userAgent: null,
+};
+
+/** The signed-in caller as an actor, optionally acting as one of their recipient rows. */
+export async function actorFor(ctx: RequestContext, recipientId: string | null = null): Promise<Actor> {
+  const { name, email } = await actor(ctx);
+  return { userId: ctx.userId, recipientId, name, email, ip: ctx.ip, userAgent: ctx.userAgent };
+}
+
+export async function logEventAs(
+  admin: SupabaseClient,
+  who: Actor,
+  documentId: string,
+  type: EventType,
+  description: string,
+  metadata: Record<string, unknown> = {},
+) {
+  const { error } = await admin.rpc('log_event', {
+    p_document_id: documentId,
+    p_type: type,
+    p_description: description,
+    p_actor_user_id: who.userId,
+    p_actor_recipient_id: who.recipientId,
+    p_actor_name: who.name,
+    p_actor_email: who.email,
+    p_ip: who.ip,
+    p_user_agent: who.userAgent,
+    p_metadata: metadata,
+  });
+  if (error) throw error;
+}
+
 export async function logEvent(
   ctx: RequestContext,
   documentId: string,
@@ -54,17 +104,5 @@ export async function logEvent(
   description: string,
   metadata: Record<string, unknown> = {},
 ) {
-  const { name, email } = await actor(ctx);
-  const { error } = await ctx.admin.rpc('log_event', {
-    p_document_id: documentId,
-    p_type: type,
-    p_description: description,
-    p_actor_user_id: ctx.userId,
-    p_actor_name: name,
-    p_actor_email: email,
-    p_ip: ctx.ip,
-    p_user_agent: ctx.userAgent,
-    p_metadata: metadata,
-  });
-  if (error) throw error;
+  await logEventAs(ctx.admin, await actorFor(ctx), documentId, type, description, metadata);
 }

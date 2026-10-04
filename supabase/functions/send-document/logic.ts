@@ -8,12 +8,10 @@ import {
 import type { RequestContext } from '../_shared/context.ts';
 import { z } from '../_shared/deps.ts';
 import { loadOwnedDocument } from '../_shared/documents.ts';
-import { emailProvider } from '../_shared/email/provider.ts';
-import { signatureRequestEmail } from '../_shared/email/templates.ts';
-import { logEvent } from '../_shared/events.ts';
+import { actorFor, logEvent } from '../_shared/events.ts';
 import { HttpError } from '../_shared/http.ts';
+import { type ActivatedRecipient, notifyActivated } from '../_shared/notify.ts';
 import { enforceRateLimit } from '../_shared/rateLimit.ts';
-import { issueToken, signingLink } from '../_shared/tokens.ts';
 
 export const SendDocumentInput = z.object({
   document_id: z.uuid(),
@@ -35,18 +33,11 @@ export interface SendDocumentResult {
   failed: string[];
 }
 
-interface ActivatedRecipient {
-  recipient_id: string;
-  name: string;
-  email: string;
-  user_id: string | null;
-  role: 'signer' | 'approver' | 'viewer' | 'cc';
-}
-
 /**
  * Sends a draft (SPEC §6.2, §7, §10): validates completeness with the shared rules, moves it to
  * in_progress and activates group 1 (send_document, one transaction), then issues each activated
- * recipient a fresh token and emails them. Later groups are notified as earlier ones finish (Phase 6).
+ * recipient a fresh token and emails them. Later groups are notified as earlier ones finish
+ * (submit-signing).
  */
 export async function sendDocument(
   input: z.output<typeof SendDocumentInput>,
@@ -122,37 +113,19 @@ export async function sendDocument(
     expires_at: expiresAt,
   });
 
-  const { data: owner } = await ctx.admin.from('profiles').select('full_name').eq('id', ctx.userId).single();
-  const provider = emailProvider();
-  const failed: string[] = [];
-  for (const r of (activated ?? []) as ActivatedRecipient[]) {
-    if (r.role === 'cc') continue;
-    try {
-      const token = await issueToken(ctx.admin, r.recipient_id, expiresAt);
-      await provider.send(
-        signatureRequestEmail({
-          recipientName: r.name,
-          recipientEmail: r.email,
-          senderName: owner?.full_name || ctx.userEmail || 'Someone',
-          documentTitle: doc.title,
-          subject: input.email_subject ?? null,
-          message: input.email_message ?? null,
-          link: signingLink(token),
-          expiresAt,
-          role: r.role,
-        }),
-      );
-      await logEvent(ctx, doc.id, 'RECIPIENT_NOTIFIED', `Signature request sent to ${r.name}`, {
-        recipient_id: r.recipient_id,
-        channel: 'email',
-      });
-    } catch (error) {
-      // The document is sent either way; a failed email is visible in the audit log and can be
-      // re-sent with Remind (Phase 7).
-      console.error('notify failed', r.recipient_id, error instanceof Error ? error.message : error);
-      failed.push(r.recipient_id);
-    }
-  }
+  const failed = await notifyActivated(
+    ctx.admin,
+    await actorFor(ctx),
+    {
+      id: doc.id,
+      title: doc.title,
+      owner_id: doc.owner_id,
+      email_subject: input.email_subject || null,
+      email_message: input.email_message || null,
+      expires_at: expiresAt,
+    },
+    (activated ?? []) as ActivatedRecipient[],
+  );
   return {
     document_id: doc.id,
     status: 'in_progress',

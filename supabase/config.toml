@@ -123,7 +123,7 @@ file_size_limit = "50MiB"
 [storage.buckets.documents]
 public = false
 file_size_limit = "25MiB"
-allowed_mime_types = ["application/pdf"]
+allowed_mime_types = ["application/pdf", "image/png"]
 objects_path = "./seed/storage/documents"
 
 # [storage.buckets.images]

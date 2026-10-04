@@ -425,6 +425,107 @@ export type Database = {
           },
         ];
       };
+      esign_consents: {
+        Row: {
+          accepted_at: string;
+          disclosure_version: string;
+          id: string;
+          ip: unknown;
+          recipient_id: string | null;
+          user_agent: string | null;
+          user_id: string | null;
+        };
+        Insert: {
+          accepted_at?: string;
+          disclosure_version: string;
+          id?: string;
+          ip?: unknown;
+          recipient_id?: string | null;
+          user_agent?: string | null;
+          user_id?: string | null;
+        };
+        Update: {
+          accepted_at?: string;
+          disclosure_version?: string;
+          id?: string;
+          ip?: unknown;
+          recipient_id?: string | null;
+          user_agent?: string | null;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'esign_consents_recipient_id_fkey';
+            columns: ['recipient_id'];
+            isOneToOne: false;
+            referencedRelation: 'document_recipients';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'esign_consents_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'esign_consents_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'public_profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      field_values: {
+        Row: {
+          asset_path: string | null;
+          document_id: string;
+          field_id: string;
+          filled_at: string;
+          recipient_id: string;
+          value: string | null;
+        };
+        Insert: {
+          asset_path?: string | null;
+          document_id: string;
+          field_id: string;
+          filled_at?: string;
+          recipient_id: string;
+          value?: string | null;
+        };
+        Update: {
+          asset_path?: string | null;
+          document_id?: string;
+          field_id?: string;
+          filled_at?: string;
+          recipient_id?: string;
+          value?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'field_values_document_id_fkey';
+            columns: ['document_id'];
+            isOneToOne: false;
+            referencedRelation: 'documents';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'field_values_field_id_fkey';
+            columns: ['field_id'];
+            isOneToOne: true;
+            referencedRelation: 'document_fields';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'field_values_recipient_id_fkey';
+            columns: ['recipient_id'];
+            isOneToOne: false;
+            referencedRelation: 'document_recipients';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       profiles: {
         Row: {
           avatar_path: string | null;
@@ -494,6 +595,8 @@ export type Database = {
           expires_at: string;
           id: string;
           last_used_at: string | null;
+          otp_verified_at: string | null;
+          purpose: string;
           recipient_id: string;
           revoked_at: string | null;
           token_hash: string;
@@ -503,6 +606,8 @@ export type Database = {
           expires_at: string;
           id?: string;
           last_used_at?: string | null;
+          otp_verified_at?: string | null;
+          purpose?: string;
           recipient_id: string;
           revoked_at?: string | null;
           token_hash: string;
@@ -512,6 +617,8 @@ export type Database = {
           expires_at?: string;
           id?: string;
           last_used_at?: string | null;
+          otp_verified_at?: string | null;
+          purpose?: string;
           recipient_id?: string;
           revoked_at?: string | null;
           token_hash?: string;
@@ -519,6 +626,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: 'recipient_access_tokens_recipient_id_fkey';
+            columns: ['recipient_id'];
+            isOneToOne: false;
+            referencedRelation: 'document_recipients';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      recipient_otps: {
+        Row: {
+          attempts: number;
+          created_at: string;
+          expires_at: string;
+          id: string;
+          otp_hash: string;
+          recipient_id: string;
+          verified_at: string | null;
+        };
+        Insert: {
+          attempts?: number;
+          created_at?: string;
+          expires_at: string;
+          id?: string;
+          otp_hash: string;
+          recipient_id: string;
+          verified_at?: string | null;
+        };
+        Update: {
+          attempts?: number;
+          created_at?: string;
+          expires_at?: string;
+          id?: string;
+          otp_hash?: string;
+          recipient_id?: string;
+          verified_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'recipient_otps_recipient_id_fkey';
             columns: ['recipient_id'];
             isOneToOne: false;
             referencedRelation: 'document_recipients';
@@ -599,11 +744,23 @@ export type Database = {
       };
     };
     Functions: {
+      activate_next_group: {
+        Args: { p_document_id: string };
+        Returns: {
+          email: string;
+          name: string;
+          recipient_id: string;
+          role: Database['public']['Enums']['recipient_role'];
+          user_id: string;
+        }[];
+      };
       can_upload_original: { Args: { p_document_id: string }; Returns: boolean };
       check_rate_limit: {
         Args: { p_key: string; p_max: number; p_window_seconds: number };
         Returns: boolean;
       };
+      complete_recipient: { Args: { p_recipient_id: string; p_values: Json }; Returns: Json };
+      decline_recipient: { Args: { p_reason: string; p_recipient_id: string }; Returns: undefined };
       document_display_status: {
         Args: {
           p_current_signing_order: number;
@@ -739,6 +896,16 @@ export type Database = {
         };
         Returns: number;
       };
+      mark_document_completed: {
+        Args: {
+          p_certificate_path: string;
+          p_completed_path: string;
+          p_completed_sha256: string;
+          p_document_id: string;
+        };
+        Returns: boolean;
+      };
+      mark_recipient_viewed: { Args: { p_recipient_id: string }; Returns: boolean };
       my_documents: {
         Args: Record<PropertyKey, never>;
         Returns: {

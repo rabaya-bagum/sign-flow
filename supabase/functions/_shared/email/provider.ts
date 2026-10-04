@@ -8,6 +8,15 @@ export interface EmailMessage {
   subject: string;
   html: string;
   text: string;
+  /** Files sent with the message (the completed PDF and certificate, SPEC §13). */
+  attachments?: EmailAttachment[];
+}
+
+export interface EmailAttachment {
+  filename: string;
+  contentType: string;
+  /** Base64-encoded file content. */
+  content: string;
 }
 
 export interface EmailProvider {
@@ -35,6 +44,15 @@ class ResendProvider implements EmailProvider {
         subject: message.subject,
         html: message.html,
         text: message.text,
+        ...(message.attachments?.length
+          ? {
+              attachments: message.attachments.map((a) => ({
+                filename: a.filename,
+                content: a.content,
+                content_type: a.contentType,
+              })),
+            }
+          : {}),
       }),
     });
     if (!res.ok) throw new Error(`Resend ${res.status}: ${(await res.text()).slice(0, 200)}`);
@@ -55,6 +73,15 @@ class MailpitProvider implements EmailProvider {
         Subject: message.subject,
         HTML: message.html,
         Text: message.text,
+        ...(message.attachments?.length
+          ? {
+              Attachments: message.attachments.map((a) => ({
+                Filename: a.filename,
+                ContentType: a.contentType,
+                Content: a.content,
+              })),
+            }
+          : {}),
       }),
     });
     if (!res.ok) throw new Error(`Mailpit ${res.status}: ${(await res.text()).slice(0, 200)}`);

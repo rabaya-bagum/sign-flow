@@ -19,6 +19,12 @@ export const APP_ERROR_CODES = [
   // Signatures (SPEC §5.7)
   'SIGNATURE_LIMIT',
   'SIGNATURE_TOO_SIMPLE',
+  // Signing links and signing (SPEC §7, §15)
+  'LINK_INVALID',
+  'LINK_EXPIRED',
+  'NOT_YOUR_TURN',
+  'OTP_REQUIRED',
+  'OTP_INVALID',
   // General (SPEC §15)
   'NETWORK_OFFLINE',
   'RATE_LIMITED',

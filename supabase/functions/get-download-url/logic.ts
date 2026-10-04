@@ -33,24 +33,31 @@ export function downloadFileName(title: string): string {
 /**
  * Authorizes the caller (owner or active participant, via RLS), logs DOCUMENT_VIEWED (purpose `view`,
  * de-duplicated) or DOCUMENT_DOWNLOADED, and returns a short-lived signed URL (SPEC §9, §10).
- * Completed copies and certificates arrive in Phase 6.
  */
 export async function getDownloadUrl(
   input: z.output<typeof GetDownloadUrlInput>,
   ctx: RequestContext,
 ): Promise<GetDownloadUrlResult> {
   const doc = await loadVisibleDocument(ctx, input.document_id);
-  if (input.kind !== 'original') {
+  const path =
+    input.kind === 'original'
+      ? doc.original_path
+      : input.kind === 'completed'
+        ? doc.completed_path
+        : doc.certificate_path;
+  if (input.kind !== 'original' && doc.status !== 'completed') {
     throw new HttpError('INVALID_STATE', 409, 'Completed copies are available after all parties sign');
   }
-  if (!doc.original_path) throw new HttpError('INVALID_STATE', 409, 'This document has no file yet');
+  if (!path) throw new HttpError('INVALID_STATE', 409, 'This document has no file yet');
 
   await enforceRateLimit(ctx.admin, `${input.purpose}:${ctx.userId}`, 60, 60);
 
-  const fileName = downloadFileName(doc.title);
+  const fileName = downloadFileName(
+    input.kind === 'certificate' ? `${doc.title.replace(/\.pdf$/i, '')} - certificate` : doc.title,
+  );
   const { data, error } = await ctx.admin.storage
     .from('documents')
-    .createSignedUrl(doc.original_path, SIGNED_URL_TTL_SECONDS);
+    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
   if (error || !data) throw error ?? new Error('Could not sign URL');
 
   if (input.purpose === 'view') {

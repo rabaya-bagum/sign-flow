@@ -61,3 +61,78 @@ ${button(input.link, action.button)}
   ].join('\n');
   return { to: { email: input.recipientEmail, name: input.recipientName }, subject, html, text };
 }
+
+export interface CompletedEmail {
+  recipientName: string;
+  recipientEmail: string;
+  documentTitle: string;
+  senderName: string;
+  /** Where to open or download the completed document (app page or a personal download link). */
+  link: string;
+  /** Whether the PDFs are attached (they are left out when too large for email). */
+  attached: boolean;
+}
+
+export function completedEmail(input: CompletedEmail): EmailMessage {
+  const subject = `Completed: ${input.documentTitle}`;
+  const files = input.attached
+    ? 'The signed document and its certificate of completion are attached.'
+    : 'The files are too large to attach. Use the button to download them.';
+  const html = layout(
+    subject,
+    `<h1 style="font-size:20px;margin:0 0 12px">Everyone has signed</h1>
+<p style="margin:0 0 8px"><strong>${escape(input.documentTitle)}</strong>, sent by ${escape(input.senderName)}, is complete.</p>
+<p style="margin:0 0 8px">${escape(files)}</p>
+${button(input.link, 'Download the signed copy')}
+<p style="font-size:14px;color:#5B6270;margin:0">The certificate lists who signed, when, and the document's fingerprints (SHA-256), so you can check that the file hasn't changed.</p>`,
+  );
+  const text = [
+    `Completed: ${input.documentTitle} (sent by ${input.senderName})`,
+    files,
+    `Download the signed copy: ${input.link}`,
+  ].join('\n\n');
+  return { to: { email: input.recipientEmail, name: input.recipientName }, subject, html, text };
+}
+
+export interface DeclinedEmail {
+  recipientName: string;
+  recipientEmail: string;
+  documentTitle: string;
+  declinedBy: string;
+  reason: string;
+}
+
+export function declinedEmail(input: DeclinedEmail): EmailMessage {
+  const subject = `Declined: ${input.documentTitle}`;
+  const html = layout(
+    subject,
+    `<h1 style="font-size:20px;margin:0 0 12px">${escape(input.declinedBy)} declined to sign</h1>
+<p style="margin:0 0 8px"><strong>${escape(input.documentTitle)}</strong> will not be completed. No further action is needed.</p>
+<blockquote style="margin:16px 0;padding:12px 16px;background:#F7F8FA;border-left:3px solid #C2410C;white-space:pre-wrap">${escape(input.reason)}</blockquote>`,
+  );
+  const text = [
+    `${input.declinedBy} declined to sign "${input.documentTitle}". It will not be completed.`,
+    `Reason:\n${input.reason}`,
+  ].join('\n\n');
+  return { to: { email: input.recipientEmail, name: input.recipientName }, subject, html, text };
+}
+
+export interface OtpEmail {
+  recipientName: string;
+  recipientEmail: string;
+  documentTitle: string;
+  code: string;
+}
+
+export function otpEmail(input: OtpEmail): EmailMessage {
+  const subject = `Your SignFlow code: ${input.code}`;
+  const html = layout(
+    subject,
+    `<h1 style="font-size:20px;margin:0 0 12px">Your code</h1>
+<p style="margin:0 0 8px">Enter this code to open <strong>${escape(input.documentTitle)}</strong>:</p>
+<p style="font-size:32px;font-weight:700;letter-spacing:6px;margin:16px 0">${escape(input.code)}</p>
+<p style="font-size:14px;color:#5B6270;margin:0">It expires in 10 minutes. If you didn't ask for it, ignore this email.</p>`,
+  );
+  const text = `Your SignFlow code for "${input.documentTitle}" is ${input.code}. It expires in 10 minutes.`;
+  return { to: { email: input.recipientEmail, name: input.recipientName }, subject, html, text };
+}

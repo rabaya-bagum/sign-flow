@@ -488,6 +488,44 @@ export type Database = {
         };
         Relationships: [];
       };
+      recipient_access_tokens: {
+        Row: {
+          created_at: string;
+          expires_at: string;
+          id: string;
+          last_used_at: string | null;
+          recipient_id: string;
+          revoked_at: string | null;
+          token_hash: string;
+        };
+        Insert: {
+          created_at?: string;
+          expires_at: string;
+          id?: string;
+          last_used_at?: string | null;
+          recipient_id: string;
+          revoked_at?: string | null;
+          token_hash: string;
+        };
+        Update: {
+          created_at?: string;
+          expires_at?: string;
+          id?: string;
+          last_used_at?: string | null;
+          recipient_id?: string;
+          revoked_at?: string | null;
+          token_hash?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'recipient_access_tokens_recipient_id_fkey';
+            columns: ['recipient_id'];
+            isOneToOne: false;
+            referencedRelation: 'document_recipients';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       saved_signatures: {
         Row: {
           created_at: string;
@@ -725,6 +763,26 @@ export type Database = {
           matched_recipient_name: string;
           title: string;
           updated_at: string;
+        }[];
+      };
+      send_document: {
+        Args: {
+          p_allow_decline: boolean;
+          p_document_id: string;
+          p_email_message: string;
+          p_email_subject: string;
+          p_expires_at: string;
+          p_owner_id: string;
+          p_reminder_first_after_days: number;
+          p_reminder_repeat_every_days: number;
+          p_require_email_otp: boolean;
+        };
+        Returns: {
+          email: string;
+          name: string;
+          recipient_id: string;
+          role: Database['public']['Enums']['recipient_role'];
+          user_id: string;
         }[];
       };
       set_default_signature: { Args: { p_id: string }; Returns: undefined };

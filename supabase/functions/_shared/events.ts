@@ -1,6 +1,23 @@
 import type { RequestContext } from './context.ts';
 
-export type EventType = 'DOCUMENT_UPLOADED' | 'DOCUMENT_DOWNLOADED' | 'DOCUMENT_VIEWED' | 'DOCUMENT_DELETED';
+export type EventType =
+  | 'DOCUMENT_UPLOADED'
+  | 'DOCUMENT_DOWNLOADED'
+  | 'DOCUMENT_VIEWED'
+  | 'DOCUMENT_DELETED'
+  | 'DOCUMENT_SENT'
+  | 'RECIPIENT_NOTIFIED'
+  | 'RECIPIENT_UPDATED'
+  | 'ESIGN_CONSENT_ACCEPTED'
+  | 'OTP_VERIFIED'
+  | 'FIELDS_COMPLETED'
+  | 'DOCUMENT_SIGNED'
+  | 'DOCUMENT_APPROVED'
+  | 'DOCUMENT_DECLINED'
+  | 'DOCUMENT_COMPLETED'
+  | 'DOCUMENT_VOIDED'
+  | 'DOCUMENT_EXPIRED'
+  | 'REMINDER_SENT';
 
 /** Appends an audit event (SPEC §12.1) with the caller's identity, IP and user agent. */
 async function actor(ctx: RequestContext) {

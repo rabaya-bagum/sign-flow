@@ -14,7 +14,8 @@
     "types": [
       "jest",
       "node"
-    ]
+    ],
+    "allowImportingTsExtensions": true
   },
   "include": [
     "**/*.ts",

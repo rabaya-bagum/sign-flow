@@ -103,6 +103,69 @@ export type Database = {
           },
         ];
       };
+      document_fields: {
+        Row: {
+          created_at: string;
+          document_id: string;
+          height: number;
+          id: string;
+          page_number: number;
+          properties: NonNullable<Json>;
+          recipient_id: string;
+          required: boolean;
+          type: Database['public']['Enums']['field_type'];
+          updated_at: string;
+          width: number;
+          x: number;
+          y: number;
+        };
+        Insert: {
+          created_at?: string;
+          document_id: string;
+          height: number;
+          id?: string;
+          page_number: number;
+          properties?: NonNullable<Json>;
+          recipient_id: string;
+          required?: boolean;
+          type: Database['public']['Enums']['field_type'];
+          updated_at?: string;
+          width: number;
+          x: number;
+          y: number;
+        };
+        Update: {
+          created_at?: string;
+          document_id?: string;
+          height?: number;
+          id?: string;
+          page_number?: number;
+          properties?: NonNullable<Json>;
+          recipient_id?: string;
+          required?: boolean;
+          type?: Database['public']['Enums']['field_type'];
+          updated_at?: string;
+          width?: number;
+          x?: number;
+          y?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'document_fields_document_id_fkey';
+            columns: ['document_id'];
+            isOneToOne: false;
+            referencedRelation: 'documents';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'document_fields_recipient_id_fkey';
+            columns: ['recipient_id'];
+            isOneToOne: false;
+            referencedRelation: 'document_recipients';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       document_pages: {
         Row: {
           box_x_pt: number;
@@ -148,7 +211,7 @@ export type Database = {
           decline_reason: string | null;
           declined_at: string | null;
           document_id: string;
-          email: string;
+          email: string | null;
           id: string;
           last_reminded_at: string | null;
           name: string;
@@ -165,7 +228,7 @@ export type Database = {
           decline_reason?: string | null;
           declined_at?: string | null;
           document_id: string;
-          email: string;
+          email?: string | null;
           id?: string;
           last_reminded_at?: string | null;
           name: string;
@@ -182,7 +245,7 @@ export type Database = {
           decline_reason?: string | null;
           declined_at?: string | null;
           document_id?: string;
-          email?: string;
+          email?: string | null;
           id?: string;
           last_reminded_at?: string | null;
           name?: string;
@@ -611,6 +674,18 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      log_document_view: {
+        Args: {
+          p_actor_email?: string;
+          p_actor_name?: string;
+          p_actor_user_id: string;
+          p_document_id: string;
+          p_ip?: unknown;
+          p_user_agent?: string;
+          p_window?: string;
+        };
+        Returns: boolean;
+      };
       log_event: {
         Args: {
           p_actor_email?: string;
@@ -640,6 +715,7 @@ export type Database = {
       };
       request_header: { Args: { p_name: string }; Returns: string };
       request_ip: { Args: Record<PropertyKey, never>; Returns: unknown };
+      save_document_fields: { Args: { p_document_id: string; p_fields: Json }; Returns: number };
       search_documents: {
         Args: { p_query: string };
         Returns: {
@@ -676,6 +752,17 @@ export type Database = {
         | 'DOCUMENT_VOIDED'
         | 'DOCUMENT_EXPIRED'
         | 'DOCUMENT_DELETED';
+      field_type:
+        | 'signature'
+        | 'initials'
+        | 'full_name'
+        | 'email'
+        | 'date_signed'
+        | 'text'
+        | 'checkbox'
+        | 'radio'
+        | 'dropdown'
+        | 'stamp';
       recipient_role: 'signer' | 'approver' | 'viewer' | 'cc';
       recipient_status: 'pending' | 'sent' | 'viewed' | 'signed' | 'approved' | 'declined';
       signature_kind: 'signature' | 'initials';
@@ -814,6 +901,18 @@ export const Constants = {
         'DOCUMENT_VOIDED',
         'DOCUMENT_EXPIRED',
         'DOCUMENT_DELETED',
+      ],
+      field_type: [
+        'signature',
+        'initials',
+        'full_name',
+        'email',
+        'date_signed',
+        'text',
+        'checkbox',
+        'radio',
+        'dropdown',
+        'stamp',
       ],
       recipient_role: ['signer', 'approver', 'viewer', 'cc'],
       recipient_status: ['pending', 'sent', 'viewed', 'signed', 'approved', 'declined'],

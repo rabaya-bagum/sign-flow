@@ -9,6 +9,9 @@ const googleIosUrlScheme = process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME;
 const signingDomain = process.env.SIGNFLOW_SIGNING_DOMAIN?.trim();
 // EAS project (eas init); push tokens need it. Push stays off in builds without it.
 const easProjectId = process.env.EAS_PROJECT_ID?.trim();
+// Sentry source-map upload in EAS builds (SENTRY_AUTH_TOKEN is an EAS secret, never committed).
+const sentryOrg = process.env.SENTRY_ORG?.trim();
+const sentryProject = process.env.SENTRY_PROJECT?.trim();
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -58,6 +61,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-router',
     ['expo-notifications', { color: '#2B59D9' }],
     'expo-secure-store',
+    ['expo-local-authentication', { faceIDPermission: 'SignFlow uses Face ID to unlock the app.' }],
     'expo-apple-authentication',
     'expo-web-browser',
     'expo-font',
@@ -84,6 +88,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         dark: { backgroundColor: '#0E1013' },
       },
     ],
+    ...(sentryOrg && sentryProject
+      ? [
+          ['@sentry/react-native/expo', { organization: sentryOrg, project: sentryProject }] as [
+            string,
+            object,
+          ],
+        ]
+      : []),
     // The Google plugin requires a valid iOS URL scheme; only add it once configured (see README).
     ...(googleIosUrlScheme
       ? [

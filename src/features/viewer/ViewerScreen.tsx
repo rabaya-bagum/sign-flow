@@ -174,9 +174,9 @@ export function ViewerScreen() {
                   surface.current?.goToPage(n);
                   setJumpOpen(false);
                 }}
-                accessibilityRole="button"
+                accessibilityRole="radio"
                 accessibilityLabel={t('viewer.jumpPage', { page: n })}
-                aria-selected={current}
+                aria-checked={current}
                 style={[
                   styles.cell,
                   {

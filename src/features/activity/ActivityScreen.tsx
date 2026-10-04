@@ -78,7 +78,7 @@ export function ActivityScreen() {
         ListFooterComponent={
           feed.isFetchingNextPage ? (
             <View style={styles.footer} accessible accessibilityLabel={t('activity.loadMore')}>
-              <ActivityIndicator color={theme.colors.primary} />
+              <ActivityIndicator color={theme.colors.primary} accessibilityLabel={t('common.loading')} />
             </View>
           ) : null
         }

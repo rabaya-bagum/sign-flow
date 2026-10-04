@@ -1,0 +1,11 @@
+# Maestro suite for iOS and Android builds (SPEC §19). Order matters: deletion runs last.
+flows:
+  - sign-document.yaml
+  - security.yaml
+  - delete-account.yaml
+executionOrder:
+  continueOnFailure: false
+  flowsOrder:
+    - sign-document
+    - security
+    - delete-account

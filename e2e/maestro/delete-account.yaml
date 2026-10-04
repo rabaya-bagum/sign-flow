@@ -1,0 +1,23 @@
+# Account deletion (SPEC §17.3): password confirmation, final confirmation, back to Welcome.
+# Run last: the seeded account is gone afterwards.
+appId: ${APP_ID}
+tags: [account]
+---
+- runFlow: _sign-in.yaml
+- tapOn: Account
+- scrollUntilVisible:
+    element:
+      id: account-delete
+- tapOn:
+    id: account-delete
+- tapOn:
+    id: delete-account-password
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: delete-account-submit
+- tapOn: Delete permanently
+- extendedWaitUntil:
+    visible:
+      id: welcome-sign-in
+    timeout: 20000

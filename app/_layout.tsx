@@ -10,15 +10,17 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/features/auth/AuthProvider';
 import { lockPortrait } from '@/hooks/useOrientation';
+import { initMonitoring, wrapRoot } from '@/lib/monitoring';
 import { useAuthStore } from '@/features/auth/store';
 import { queryClient } from '@/lib/queryClient';
 import { usePreferencesStore } from '@/store/preferences';
 import { ThemeProvider, useTheme } from '@/theme';
 
+initMonitoring();
 void SplashScreen.preventAutoHideAsync();
 lockPortrait();
 
-export default function RootLayout() {
+function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -33,6 +35,8 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default wrapRoot(RootLayout);
 
 function RootNavigator() {
   const theme = useTheme();
@@ -49,6 +53,9 @@ function RootNavigator() {
   if (!ready) return null;
 
   const signedIn = status === 'signedIn';
+  const signedOut = status === 'signedOut';
+  // Signed in with the password or a social account, but the authenticator code is still owed.
+  const secondFactor = status === 'mfaRequired';
 
   return (
     <>
@@ -58,10 +65,10 @@ function RootNavigator() {
       >
         {/* index redirects to the right group; guards below decide which groups exist. */}
         <Stack.Screen name="index" />
-        <Stack.Protected guard={!signedIn && !onboardingSeen}>
+        <Stack.Protected guard={signedOut && !onboardingSeen}>
           <Stack.Screen name="(onboarding)" />
         </Stack.Protected>
-        <Stack.Protected guard={(!signedIn && onboardingSeen) || recovering}>
+        <Stack.Protected guard={(signedOut && onboardingSeen) || recovering || secondFactor}>
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && !recovering}>

@@ -1,0 +1,18 @@
+# Account → Security: the screen opens, other devices can be signed out, Change password is offered
+# to password accounts. Two-factor needs a TOTP code, which Maestro can't compute: covered by
+# tests/e2e/security-flow.mjs (web) and the Deno/pgTAP tests.
+appId: ${APP_ID}
+tags: [security]
+---
+- runFlow: _sign-in.yaml
+- tapOn: Account
+- tapOn:
+    id: account-security
+- assertVisible:
+    id: security-password
+- assertVisible:
+    id: security-two-factor
+- tapOn:
+    id: security-other-devices
+- tapOn: Sign out others
+- assertVisible: Other devices have been signed out.

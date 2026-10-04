@@ -3,6 +3,7 @@ import { z } from '../_shared/deps.ts';
 import { loadOwnedDocument } from '../_shared/documents.ts';
 import { logEvent } from '../_shared/events.ts';
 import { HttpError } from '../_shared/http.ts';
+import { enforceRateLimit } from '../_shared/rateLimit.ts';
 
 export const DeleteDraftInput = z.object({ document_id: z.uuid() });
 
@@ -11,6 +12,7 @@ export const DeleteDraftInput = z.object({ document_id: z.uuid() });
  * DOCUMENT_DELETED. The row stays so the append-only audit log never dangles.
  */
 export async function deleteDraft(input: z.output<typeof DeleteDraftInput>, ctx: RequestContext) {
+  await enforceRateLimit(ctx.admin, `delete-draft:${ctx.userId}`, 60, 3600);
   const doc = await loadOwnedDocument(ctx, input.document_id);
   if (doc.status !== 'draft') {
     throw new HttpError('INVALID_STATE', 409, 'Only drafts can be deleted; void sent documents instead');

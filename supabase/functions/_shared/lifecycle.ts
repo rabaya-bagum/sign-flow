@@ -100,6 +100,12 @@ export const VoidDocumentInput = z.object({
 
 /** Voids with a reason (terminal): links stop working; active and finished recipients are told. */
 export async function voidDocument(input: z.output<typeof VoidDocumentInput>, ctx: RequestContext) {
+  await enforceRateLimit(ctx.admin, `void:${ctx.userId}`, 20, 3600);
+  return voidOwnedDocument(input, ctx);
+}
+
+/** Void without the per-user limit: for account deletion, which cancels every document in progress. */
+export async function voidOwnedDocument(input: z.output<typeof VoidDocumentInput>, ctx: RequestContext) {
   const owned = await loadOwnedDocument(ctx, input.document_id);
   const { data: recipients, error } = await ctx.admin.rpc('void_document', {
     p_document_id: owned.id,

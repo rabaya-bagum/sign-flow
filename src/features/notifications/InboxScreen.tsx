@@ -75,7 +75,7 @@ export function InboxScreen() {
                   {item.body}
                 </AppText>
               </View>
-              <AppText variant="caption" color="textTertiary">
+              <AppText variant="caption" color="textSecondary">
                 {time}
               </AppText>
             </Pressable>
@@ -95,7 +95,11 @@ export function InboxScreen() {
             />
           )
         }
-        ListFooterComponent={inbox.isFetchingNextPage ? <ActivityIndicator style={styles.footer} /> : null}
+        ListFooterComponent={
+          inbox.isFetchingNextPage ? (
+            <ActivityIndicator style={styles.footer} accessibilityLabel={t('common.loading')} />
+          ) : null
+        }
         onEndReached={() => {
           if (inbox.hasNextPage && !inbox.isFetchingNextPage) void inbox.fetchNextPage();
         }}

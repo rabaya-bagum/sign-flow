@@ -30,7 +30,6 @@ export function ChipGroup<T extends string>({
       <Pressable
         key={option.value}
         accessibilityRole="radio"
-        aria-selected={selected}
         aria-checked={selected}
         accessibilityLabel={option.label}
         testID={testID ? `${testID}-${option.value}` : undefined}

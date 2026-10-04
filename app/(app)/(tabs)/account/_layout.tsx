@@ -23,6 +23,10 @@ export default function AccountLayout() {
       <Stack.Screen name="signatures" options={{ title: t('signatures.screenTitle') }} />
       <Stack.Screen name="notifications" options={{ title: t('notificationPrefs.title') }} />
       <Stack.Screen name="default-signing" options={{ title: t('defaultSigning.title') }} />
+      <Stack.Screen name="security" options={{ title: t('account.security') }} />
+      <Stack.Screen name="change-password" options={{ title: t('account.changePassword') }} />
+      <Stack.Screen name="two-factor" options={{ title: t('account.twoFactor') }} />
+      <Stack.Screen name="delete" options={{ title: t('account.deleteAccount') }} />
     </Stack>
   );
 }

@@ -67,6 +67,7 @@ export function BottomSheet({
             style={styles.body}
             contentContainerStyle={{ paddingHorizontal: theme.spacing.lg }}
             keyboardShouldPersistTaps="handled"
+            tabIndex={0}
           >
             {children}
           </ScrollView>

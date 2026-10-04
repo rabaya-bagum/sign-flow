@@ -130,7 +130,7 @@ describe('SignatureSheet', () => {
     const onComplete = await open();
 
     await screen.findByTestId('sig-saved-b');
-    expect(screen.getByTestId('sig-saved-b')).toBeSelected();
+    expect(screen.getByTestId('sig-saved-b')).toBeChecked();
     expect(screen.getByTestId('sig-saved-b').props.accessibilityLabel).toMatch(/uploaded signature.*Default/);
     await fireEvent.press(screen.getByTestId('sig-confirm'));
     await waitFor(() => expect(onComplete).toHaveBeenCalled());

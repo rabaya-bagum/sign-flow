@@ -109,6 +109,8 @@ minimal shadows, iOS-level polish that also feels native on Android.
 | `fieldHighlight`  | `#FFF4D6` | `#3A3016` |
 
 Text and interactive colors must meet WCAG AA contrast against their background. Verify this in P1.
+`textTertiary` (3.2:1 on white) is for disabled and decorative elements only. Readable text uses
+`textSecondary` or stronger (P8 accessibility audit, `docs/accessibility-audit.md`).
 
 ### 3.2 Scales
 
@@ -832,6 +834,15 @@ SignFlow brand only.
 - Storage is encrypted at rest (Supabase default). Signed URLs are short-lived.
 - No secrets in the app, and no logging of tokens, OTPs, or signature images.
 - Dependency audit in CI. Confirm Sentry PII scrubbing.
+- **Two-factor is enforced by the server** (P8). With a verified TOTP factor, only `aal2` sessions pass:
+  - a restrictive RLS policy on every table and on `storage.objects`;
+  - a check in the definer helpers;
+  - a check in every Edge Function.
+- **Rate limits as built (P8):**
+  - an overall ceiling of 300 function calls per minute per signed-in user;
+  - per-action limits (see `docs/security-checklist.md` §4).
+
+  The full review and its sign-off are in `docs/security-checklist.md`.
 
 ---
 
@@ -906,6 +917,17 @@ drafts, and uploads, and signs out everywhere. For documents the user sent or si
 parties, the user's PII on those records is retained as legally required for the other participants and
 documented in the privacy policy.
 
+As built (P8):
+
+- **Re-authentication:** the password; for social-only accounts, a sign-in within the last 10
+  minutes; plus the second factor if enrolled.
+- **Documents still in progress** are voided, and their recipients are told.
+- **Owned documents** that nobody else takes part in are deleted, with their files.
+- **The profile** stays as a tombstone that keeps only the name and email (documents and the
+  append-only audit log reference it).
+- **The auth user** is soft-deleted (Supabase obfuscates the email, removes identities and revokes
+  every session), so the same email can register again as a new account.
+
 ### 17.4 Store requirements
 
 Sign in with Apple is offered wherever Google sign-in is offered on iOS. Privacy policy and terms are
@@ -947,7 +969,7 @@ linked in-app and in the stores. Privacy nutrition labels / data safety forms ar
   /functions              # one folder per Edge Function + _shared/
   /tests                  # pgTAP tests (RLS!)
   seed.sql                # local-dev seed data only
-/e2e                      # Maestro flows
+/e2e/maestro              # Maestro flows for iOS/Android builds (web E2E: /tests/e2e, Playwright)
 /assets                   # fonts (licensed), icons (original), images
 ```
 

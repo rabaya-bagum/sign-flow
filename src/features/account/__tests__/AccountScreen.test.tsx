@@ -39,6 +39,7 @@ const profile: accountApi.Profile = {
   default_reminder: {},
   created_at: '2026-10-01T00:00:00Z',
   updated_at: '2026-10-01T00:00:00Z',
+  deleted_at: null,
 };
 
 beforeEach(() => {
@@ -52,7 +53,8 @@ describe('AccountScreen', () => {
     await renderWithProviders(<AccountScreen />);
     expect(await screen.findByText('John Doe')).toBeOnTheScreen();
     expect(screen.getByText('owner@signflow.test')).toBeOnTheScreen();
-    expect(screen.getAllByText('Coming in Phase 8').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('account-security')).toBeOnTheScreen();
+    expect(screen.getByTestId('account-delete')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Theme, System' })).toBeOnTheScreen();
     expect(await screen.findByLabelText('Used storage, 4.2 MB · 6 documents')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Add photo' })).toBeOnTheScreen();

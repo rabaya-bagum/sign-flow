@@ -1,4 +1,4 @@
-import { StyleSheet, Switch, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { MIN_TOUCH_TARGET, useTheme } from '@/theme';
 
@@ -26,7 +26,10 @@ export function SwitchRow({
 }: SwitchRowProps) {
   const theme = useTheme();
   return (
-    <View
+    // The whole row toggles, so the touch target is the row (≥ 44 pt), not the small switch.
+    <Pressable
+      onPress={disabled ? undefined : () => onValueChange(!value)}
+      accessible={false}
       style={[
         styles.row,
         { paddingHorizontal: theme.spacing.lg },
@@ -36,7 +39,7 @@ export function SwitchRow({
       ]}
     >
       <View style={styles.text} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-        <AppText color={disabled ? 'textTertiary' : 'textPrimary'}>{title}</AppText>
+        <AppText color={disabled ? 'textSecondary' : 'textPrimary'}>{title}</AppText>
         {subtitle ? (
           <AppText variant="footnote" color="textSecondary">
             {subtitle}
@@ -49,12 +52,10 @@ export function SwitchRow({
         disabled={disabled}
         accessibilityLabel={title}
         accessibilityHint={subtitle}
-        aria-checked={value}
-        aria-disabled={disabled}
         trackColor={{ true: theme.colors.primary, false: theme.colors.border }}
         testID={testID}
       />
-    </View>
+    </Pressable>
   );
 }
 

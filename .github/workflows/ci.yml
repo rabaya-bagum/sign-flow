@@ -26,6 +26,8 @@ jobs:
       - run: npm test -- --ci
       - run: npm run check:surface
       - run: npm run check:dev-routes
+      - run: npm run check:functions
+      - run: npm run audit:deps
 
   backend:
     name: Backend (pgTAP, Edge Function tests)

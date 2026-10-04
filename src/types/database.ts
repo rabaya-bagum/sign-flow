@@ -590,6 +590,7 @@ export type Database = {
           created_at: string;
           default_expiry_days: number;
           default_reminder: NonNullable<Json>;
+          deleted_at: string | null;
           email: string;
           full_name: string;
           id: string;
@@ -604,6 +605,7 @@ export type Database = {
           created_at?: string;
           default_expiry_days?: number;
           default_reminder?: NonNullable<Json>;
+          deleted_at?: string | null;
           email: string;
           full_name: string;
           id: string;
@@ -618,6 +620,7 @@ export type Database = {
           created_at?: string;
           default_expiry_days?: number;
           default_reminder?: NonNullable<Json>;
+          deleted_at?: string | null;
           email?: string;
           full_name?: string;
           id?: string;
@@ -878,6 +881,7 @@ export type Database = {
       claim_manual_reminder: { Args: { p_owner_id: string; p_recipient_id: string }; Returns: string };
       complete_recipient: { Args: { p_recipient_id: string; p_values: Json }; Returns: Json };
       decline_recipient: { Args: { p_reason: string; p_recipient_id: string }; Returns: undefined };
+      delete_account_data: { Args: { p_user_id: string }; Returns: Json };
       document_display_status: {
         Args: {
           p_current_signing_order: number;

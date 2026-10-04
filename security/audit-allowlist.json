@@ -1,0 +1,19 @@
+{
+  "$comment": "High/critical npm advisories accepted after review (npm run audit:deps). Each entry needs a reason and a review-by date; an expired entry fails CI again.",
+  "advisories": [
+    {
+      "id": "GHSA-vfj7-8cjw-p6xm",
+      "package": "braces",
+      "path": "expo > @expo/cli > @expo/metro-file-map > micromatch > braces",
+      "reason": "Build-time only (Metro file watching on the developer's machine). Patterns come from the project, not users; not in the app bundle or Edge Functions.",
+      "reviewBy": "2027-01-31"
+    },
+    {
+      "id": "GHSA-86w9-cpqp-85rv",
+      "package": "node-forge",
+      "path": "expo > @expo/cli > node-forge",
+      "reason": "Used by the Expo CLI for local dev-server and code-signing certificates. Not in the app bundle or Edge Functions; SignFlow verifies no RSA signatures with it.",
+      "reviewBy": "2027-01-31"
+    }
+  ]
+}

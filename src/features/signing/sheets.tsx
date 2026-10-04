@@ -60,7 +60,7 @@ export function ConsentSheet({
             <AppText color="textSecondary">{section.body}</AppText>
           </View>
         ))}
-        <AppText variant="caption" color="textTertiary">
+        <AppText variant="caption" color="textSecondary">
           {t('signing.consentVersion', { version: ESIGN_DISCLOSURE_VERSION })}
         </AppText>
       </View>
@@ -162,7 +162,6 @@ function FieldSheetBody({
                 key={option}
                 accessibilityRole="radio"
                 aria-checked={selected}
-                aria-selected={selected}
                 onPress={() => {
                   onChange(option);
                   onClose();

@@ -1,5 +1,6 @@
 import { useAssets } from 'expo-asset';
 import { useEffect, useState, type Ref } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTypes';
@@ -20,6 +21,7 @@ const pageOf = (url: string) => url.split('#')[0];
  */
 export function PdfSurface({ ref, ...props }: PdfSurfaceProps & { ref?: Ref<PdfSurfaceHandle> }) {
   const theme = useTheme();
+  const { t } = useTranslation();
   const [assets, assetError] = useAssets(SURFACE_ASSET);
   const { session, receive, fail } = useSurface(props, ref);
   // Remounts the WebView after its content process dies (iOS memory pressure, Android renderer crash).
@@ -90,7 +92,7 @@ export function PdfSurface({ ref, ...props }: PdfSurfaceProps & { ref?: Ref<PdfS
         />
       ) : (
         <View style={styles.loading}>
-          <ActivityIndicator color={theme.colors.textSecondary} />
+          <ActivityIndicator color={theme.colors.textSecondary} accessibilityLabel={t('common.loading')} />
         </View>
       )}
     </View>

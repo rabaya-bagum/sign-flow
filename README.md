@@ -94,29 +94,35 @@ via `signflow://auth/callback`.
 
 ## Scripts
 
-| Command                               | What it does                                                                                                             |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `npm run typecheck`                   | `tsc --noEmit`                                                                                                           |
-| `npm run lint`                        | ESLint (`eslint-config-expo` + Prettier)                                                                                 |
-| `npm test`                            | Jest + React Native Testing Library (unit and component tests)                                                           |
-| `npm run db:start`                    | Start the local Supabase stack                                                                                           |
-| `npm run db:reset`                    | Recreate the local database from migrations + `seed.sql`                                                                 |
-| `npm run db:test`                     | pgTAP tests in `supabase/tests/database` (run `db:reset` first; one file checks seed data)                               |
-| `npm run test:integration`            | End-to-end tests against the running stack: auth, Storage/TUS uploads, functions over HTTP (needs `functions:serve`)     |
-| `npm run test:functions`              | Deno tests for Edge Function logic against the local stack (`supabase/functions/tests`), incl. a 25 MB / 200-page timing |
-| `npm run functions:serve`             | Serve Edge Functions locally (hot reload)                                                                                |
-| `npm run fixtures`                    | Regenerate PDF/image fixtures and the seed originals (`scripts/generate-fixtures.ts`)                                    |
-| `npm run gen:types`                   | Regenerate `src/types/database.ts` from the local schema                                                                 |
-| `npm run build:surface`               | Rebuild the offline PDF surface `assets/pdf-surface/surface.html` from `web/pdf-surface` (commit the result)             |
-| `npm run check:surface`               | Fail if `surface.html` is stale (also covered by Jest)                                                                   |
-| `npm run test:surface`                | PDF surface in Chromium (Playwright): worker + main-thread fallback, errors, invalid commands, taps                      |
-| `npm run test:golden`                 | Golden raster test: shapes stamped by `stamp.ts`, rendered by the surface, must land within ±1 pt                        |
-| `npm run check:dev-routes`            | Export production bundles (web, Android) and fail if any `/dev/*` screen code is included                                |
-| `node tests/e2e/editor-roundtrip.mjs` | Field editor E2E on the web build (port 8081; needs `functions:serve`): place, drag, reload, compare with the DB         |
-| `node tests/e2e/send-flow.mjs`        | Recipients → fields → review & send in the web build; checks the emails in Mailpit                                       |
-| `node tests/e2e/activity-flow.mjs`    | Inbox notice → remind → void → timeline and Activity tab; notification settings saved                                    |
-| `node tests/e2e/signing-flow.mjs`     | Owner signs in the app, guest signs by link, CC copied; checks completion emails, attachments and certificate hashes     |
-| `npm run functions:deploy`            | Deploy the production Edge Functions (explicit list; never `dev-stamp`)                                                  |
+| Command                               | What it does                                                                                                              |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`                   | `tsc --noEmit`                                                                                                            |
+| `npm run lint`                        | ESLint (`eslint-config-expo` + Prettier)                                                                                  |
+| `npm test`                            | Jest + React Native Testing Library (unit and component tests)                                                            |
+| `npm run db:start`                    | Start the local Supabase stack                                                                                            |
+| `npm run db:reset`                    | Recreate the local database from migrations + `seed.sql`                                                                  |
+| `npm run db:test`                     | pgTAP tests in `supabase/tests/database` (run `db:reset` first; one file checks seed data)                                |
+| `npm run test:integration`            | End-to-end tests against the running stack: auth, Storage/TUS uploads, functions over HTTP (needs `functions:serve`)      |
+| `npm run test:functions`              | Deno tests for Edge Function logic against the local stack (`supabase/functions/tests`), incl. a 25 MB / 200-page timing  |
+| `npm run functions:serve`             | Serve Edge Functions locally (hot reload)                                                                                 |
+| `npm run fixtures`                    | Regenerate PDF/image fixtures and the seed originals (`scripts/generate-fixtures.ts`)                                     |
+| `npm run gen:types`                   | Regenerate `src/types/database.ts` from the local schema                                                                  |
+| `npm run build:surface`               | Rebuild the offline PDF surface `assets/pdf-surface/surface.html` from `web/pdf-surface` (commit the result)              |
+| `npm run check:surface`               | Fail if `surface.html` is stale (also covered by Jest)                                                                    |
+| `npm run test:surface`                | PDF surface in Chromium (Playwright): worker + main-thread fallback, errors, invalid commands, taps                       |
+| `npm run test:golden`                 | Golden raster test: shapes stamped by `stamp.ts`, rendered by the surface, must land within ±1 pt                         |
+| `npm run check:dev-routes`            | Export production bundles (web, Android) and fail if any `/dev/*` screen code is included                                 |
+| `node tests/e2e/editor-roundtrip.mjs` | Field editor E2E on the web build (port 8081; needs `functions:serve`): place, drag, reload, compare with the DB          |
+| `node tests/e2e/send-flow.mjs`        | Recipients → fields → review & send in the web build; checks the emails in Mailpit                                        |
+| `node tests/e2e/activity-flow.mjs`    | Inbox notice → remind → void → timeline and Activity tab; notification settings saved                                     |
+| `node tests/e2e/signing-flow.mjs`     | Owner signs in the app, guest signs by link, CC copied; checks completion emails, attachments and certificate hashes      |
+| `node tests/e2e/security-flow.mjs`    | Two-factor on → other devices signed out → sign-in code challenge → change password → delete account                      |
+| `node tests/e2e/a11y-audit.mjs`       | axe-core (WCAG 2.1 AA) and 44 pt touch targets on 17 screens of the web build; fails on serious/critical issues           |
+| `node scripts/store-screenshots.mjs`  | Draft store screenshots (1290×2796) from the web build into `docs/release/screenshots`                                    |
+| `npm run audit:deps`                  | Fail on high/critical npm advisories not accepted in `security/audit-allowlist.json` (runs in CI)                         |
+| `npm run check:functions`             | Every Edge Function folder has a `deno.json` mapping `zod` (runs in CI)                                                   |
+| `maestro test e2e/maestro`            | Native E2E on iOS/Android builds (sign a request, security, delete account); seed with `node scripts/e2e/seed-native.mjs` |
+| `npm run functions:deploy`            | Deploy the production Edge Functions (explicit list; never `dev-stamp`)                                                   |
 
 After changing a migration: `npm run db:reset && npm run gen:types && npm run db:test`.
 
@@ -216,6 +222,32 @@ Push needs a development or store build on a real device (not Expo Go, simulator
 secret `EXPO_ACCESS_TOKEN` is only needed if "enhanced push security" is on for the project. Everyone
 also gets every notice in the in-app inbox (bell on Home).
 
+### Two-factor, password changes and account deletion
+
+Turn these on in the hosted project's Auth settings to match `supabase/config.toml`:
+
+- **MFA → TOTP:** enroll and verify enabled. The database and functions then require an `aal2` session
+  from anyone with a verified factor (`20261009000200_mfa.sql`).
+- **Secure password change:** on. Changing the password without a recent sign-in asks for a code sent by
+  email.
+
+Account deletion (Account → Delete account) is the `delete-account` function. It needs no extra
+secrets. What is kept for other participants is described in `docs/security-checklist.md` §6.
+
+### Crash reporting (Sentry)
+
+This is optional: set `EXPO_PUBLIC_SENTRY_DSN` (and `EXPO_PUBLIC_APP_ENV`) to turn it on.
+
+- **Source maps in EAS builds:** set `SENTRY_ORG` and `SENTRY_PROJECT`, and add `SENTRY_AUTH_TOKEN` as
+  an EAS secret.
+- **What is sent:** events are scrubbed on the device (`src/lib/scrub.ts`), with no screenshots, view
+  hierarchy or console breadcrumbs. Also turn on server-side data scrubbing in the Sentry project.
+
+### Biometric unlock
+
+`expo-local-authentication` needs a development or store build (Face ID usage string in
+`app.config.ts`). It is hidden on the web.
+
 ### Fonts and licences
 
 Typed signatures use three script fonts bundled in [`assets/fonts`](./assets/fonts), all under the
@@ -290,3 +322,8 @@ against a dev web build on port 8081.
   and allow 5 attempts. Links stop working when the document ends (or a newer link is sent).
 - Signing state changes (values, group advance, decline, completion) run in database functions that lock
   the document row, so concurrent submissions cannot both finalize or skip a signer.
+- With two-factor on, every table, bucket and Edge Function refuses sessions that have not passed the
+  code (`aal2`).
+- Every signed-in caller has an overall ceiling of 300 function calls a minute, below the per-action limits.
+- The full review is in `docs/security-checklist.md`. Accessibility is in `docs/accessibility-audit.md`.
+  Store copy and privacy labels are in `docs/release/`.

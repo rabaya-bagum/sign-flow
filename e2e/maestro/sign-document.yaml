@@ -1,0 +1,34 @@
+# Upload is seeded (the system file picker can't be driven reliably); everything after it is the
+# real app: open the request, accept the ESIGN disclosure, sign through the field list (the screen
+# reader path, no taps inside the PDF), finish, and see the completed document.
+appId: ${APP_ID}
+tags: [signing]
+---
+- runFlow: _sign-in.yaml
+- tapOn: Documents
+- tapOn: ${DOC_TITLE}
+- tapOn:
+    id: details-sign
+- extendedWaitUntil:
+    visible:
+      id: consent-sheet
+    timeout: 20000
+- tapOn:
+    id: consent-agree
+- tapOn:
+    id: signing-fields
+- tapOn:
+    id: fields-item-0
+- tapOn: Type
+- tapOn:
+    id: sig-confirm
+- assertVisible: 1 of 1 required
+- tapOn:
+    id: signing-finish
+- tapOn:
+    id: finish-confirm
+- extendedWaitUntil:
+    visible:
+      id: signing-finished
+    timeout: 60000
+- assertVisible: .*Everyone has signed.*

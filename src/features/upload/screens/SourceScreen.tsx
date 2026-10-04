@@ -115,7 +115,7 @@ export function SourceScreen() {
     : '';
 
   return (
-    <Screen scroll edges={['bottom']}>
+    <Screen scroll edges={['bottom']} testID="source-screen">
       <AppText variant="footnote" color="textSecondary" style={styles.step}>
         {t('upload.stepSource')}
       </AppText>

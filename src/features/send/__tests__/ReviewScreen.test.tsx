@@ -89,8 +89,8 @@ describe('ReviewScreen', () => {
   it('uses profile defaults and sends with the chosen settings', async () => {
     await renderWithProviders(<ReviewScreen />);
     expect((await screen.findByTestId('review-subject')).props.value).toBe('Please sign: Lease.pdf');
-    expect(screen.getByTestId('review-expiry-14')).toBeSelected();
-    expect(screen.getByTestId('review-reminders-2')).toBeSelected();
+    expect(screen.getByTestId('review-expiry-14')).toBeChecked();
+    expect(screen.getByTestId('review-reminders-2')).toBeChecked();
     await fireEvent.changeText(screen.getByTestId('review-message'), 'Thanks!');
     await fireEvent.press(screen.getByTestId('review-expiry-7'));
     await fireEvent.press(screen.getByTestId('review-send'));

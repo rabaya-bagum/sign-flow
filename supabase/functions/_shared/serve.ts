@@ -1,6 +1,10 @@
 import { requestContext, type RequestContext } from './context.ts';
 import { z } from './deps.ts';
 import { corsHeaders, errorResponse, HttpError, json } from './http.ts';
+import { enforceRateLimit } from './rateLimit.ts';
+
+/** Every signed-in caller, across all functions: a ceiling under the per-action limits (SPEC §14). */
+export const API_RATE_LIMIT = { max: 300, windowSeconds: 60 };
 
 /**
  * Standard Edge Function wrapper: CORS, POST-only, JWT → RequestContext, Zod-validated JSON body,
@@ -15,6 +19,12 @@ export function serveJson<S extends z.ZodType>(
     try {
       if (req.method !== 'POST') throw new HttpError('INVALID_INPUT', 405, 'POST only');
       const ctx = await requestContext(req);
+      await enforceRateLimit(
+        ctx.admin,
+        `api:${ctx.userId}`,
+        API_RATE_LIMIT.max,
+        API_RATE_LIMIT.windowSeconds,
+      );
       let body: unknown;
       try {
         body = await req.json();

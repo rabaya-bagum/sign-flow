@@ -1,4 +1,9 @@
-import { parseMessage, surfaceCommandSchema, type SurfaceCommand, type SurfaceEvent } from '../../../shared/pdfBridge';
+import {
+  parseMessage,
+  surfaceCommandSchema,
+  type SurfaceCommand,
+  type SurfaceEvent,
+} from '../../../shared/pdfBridge';
 
 declare global {
   interface Window {
@@ -31,7 +36,8 @@ export function listen(handler: (command: SurfaceCommand) => void): void {
   const receive = (event: MessageEvent) => {
     const fromParent = window.parent !== window && event.source === window.parent;
     // react-native-webview delivers host messages with no source window.
-    const fromNative = Boolean(window.ReactNativeWebView) && (event.source === null || event.source === window);
+    const fromNative =
+      Boolean(window.ReactNativeWebView) && (event.source === null || event.source === window);
     if (!fromParent && !fromNative) return;
     const command = parseMessage(surfaceCommandSchema, event.data);
     if (!command) return;

@@ -18,7 +18,7 @@ type Command = SurfaceCommand extends infer C ? (C extends SurfaceCommand ? Omit
  */
 export class SurfaceSession {
   private ready = false;
-  private state = new Map<'load' | 'setOverlays' | 'highlight', SurfaceCommand>();
+  private state = new Map<'load' | 'setOverlays' | 'highlight' | 'setBackground', SurfaceCommand>();
   private pending = new Map<'goToPage' | 'setZoom', SurfaceCommand>();
 
   private post: (raw: string) => void = () => {};
@@ -34,6 +34,7 @@ export class SurfaceSession {
       case 'load':
       case 'setOverlays':
       case 'highlight':
+      case 'setBackground':
         this.state.set(full.type, full);
         break;
       case 'goToPage':
@@ -49,7 +50,7 @@ export class SurfaceSession {
     const event = parseMessage(surfaceEventSchema, raw);
     if (event?.type === 'ready') {
       this.ready = true;
-      for (const type of ['load', 'setOverlays', 'highlight'] as const) {
+      for (const type of ['load', 'setBackground', 'setOverlays', 'highlight'] as const) {
         const command = this.state.get(type);
         if (command) this.post(JSON.stringify(command));
       }

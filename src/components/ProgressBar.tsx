@@ -18,7 +18,7 @@ export function ProgressBar({ value, accessibilityLabel, testID }: ProgressBarPr
       accessibilityRole="progressbar"
       accessibilityLabel={accessibilityLabel}
       accessibilityValue={clamped === null ? undefined : { min: 0, max: 100, now: Math.round(clamped * 100) }}
-      accessibilityState={{ busy: true }}
+      aria-busy
       testID={testID}
       style={[styles.track, { backgroundColor: theme.colors.border, borderRadius: theme.radius.full }]}
     >

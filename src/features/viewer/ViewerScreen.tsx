@@ -176,7 +176,7 @@ export function ViewerScreen() {
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={t('viewer.jumpPage', { page: n })}
-                accessibilityState={{ selected: current }}
+                aria-selected={current}
                 style={[
                   styles.cell,
                   {

@@ -25,6 +25,8 @@ describe('pdfBridge commands', () => {
     ).not.toBeNull();
     expect(cmd({ v: 1, type: 'setZoom', zoom: 4 })).not.toBeNull();
     expect(cmd({ v: 1, type: 'highlight', id: null })).not.toBeNull();
+    expect(cmd({ v: 1, type: 'setBackground', background: '#0E1013' })).not.toBeNull();
+    expect(cmd({ v: 1, type: 'setBackground', background: 'url(x)' })).toBeNull();
   });
 
   it.each([

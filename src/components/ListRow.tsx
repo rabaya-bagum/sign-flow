@@ -55,7 +55,7 @@ export function ListRow({
       accessibilityRole={onPress ? accessibilityRole : undefined}
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint}
-      accessibilityState={{ disabled: disabled || !onPress }}
+      aria-disabled={disabled || !onPress}
       testID={testID}
       style={({ pressed }) => [
         styles.row,

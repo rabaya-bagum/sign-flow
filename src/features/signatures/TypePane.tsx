@@ -49,7 +49,8 @@ export function TypePane({ kind, text, onChangeText, fontKey, onChangeFont, ink 
             <Pressable
               key={font.key}
               accessibilityRole="radio"
-              accessibilityState={{ selected, checked: selected }}
+              aria-selected={selected}
+              aria-checked={selected}
               accessibilityLabel={t('signatures.fontOptionLabel', { font: font.label })}
               onPress={() => onChangeFont(font.key)}
               testID={`type-font-${font.key}`}

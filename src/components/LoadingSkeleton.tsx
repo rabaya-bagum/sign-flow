@@ -80,7 +80,7 @@ export function LoadingSkeleton({ rows = 3, testID }: LoadingSkeletonProps) {
       accessible
       accessibilityRole="progressbar"
       accessibilityLabel={t('common.loading')}
-      accessibilityState={{ busy: true }}
+      aria-busy
       testID={testID}
       style={{ gap: theme.spacing.lg, padding: theme.spacing.lg }}
     >

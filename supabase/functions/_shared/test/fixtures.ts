@@ -60,7 +60,11 @@ export function noisePng(width: number, height: number): Promise<Uint8Array> {
 }
 
 /** RGB PNG from a per-pixel function. */
-export function rgbPng(width: number, height: number, pixel: (x: number, y: number) => [number, number, number]) {
+export function rgbPng(
+  width: number,
+  height: number,
+  pixel: (x: number, y: number) => [number, number, number],
+) {
   const raw = new Uint8Array((width * 3 + 1) * height);
   for (let y = 0; y < height; y++) {
     raw[y * (width * 3 + 1)] = 0;

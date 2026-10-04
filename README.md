@@ -7,8 +7,8 @@ Cross-platform (iOS + Android) e-signature app built with Expo + Supabase.
   [`phase-2.md`](./prompts/phase-2.md), [`phase-3.md`](./prompts/phase-3.md))
 - [`docs/phase-reports/`](./docs/phase-reports): what each phase delivered, test results, open TODOs
 
-**Status:** Phase 2 (upload & document library) complete. See the [Phase 1](./docs/phase-reports/phase-1.md) and
-[Phase 2](./docs/phase-reports/phase-2.md) reports.
+**Status:** Phase 3 (PDF viewer & signatures) complete. See the [Phase 1](./docs/phase-reports/phase-1.md),
+[Phase 2](./docs/phase-reports/phase-2.md) and [Phase 3](./docs/phase-reports/phase-3.md) reports.
 
 ## Stack
 
@@ -20,6 +20,8 @@ Cross-platform (iOS + Android) e-signature app built with Expo + Supabase.
 | supabase-js    | 2.117                                                                     |
 | TypeScript     | 6.0, `strict` + `noUncheckedIndexedAccess`                                |
 | Edge Functions | Deno 2 (`deno` dev dependency for tests); `pdf-lib` 1.17.1, `zod` 4       |
+| PDF rendering  | `pdfjs-dist` 6.3.289 in `react-native-webview` 13.16 (iframe on web)      |
+| Signatures     | `@shopify/react-native-skia` 2.6 (CanvasKit wasm on web)                  |
 
 Expo Go is **not** supported: the app uses native modules (secure storage, Apple/Google sign-in), so
 run it in a development build.
@@ -156,9 +158,28 @@ Buckets are created by migration (`20261003000900_storage.sql`) and are all priv
 | `documents`   | `{owner}/{document}/original.pdf` (≤ 25 MB, PDF)     | Insert own draft's original once; reads via signed URLs from `get-download-url` |
 | `uploads-tmp` | Scans/photos awaiting conversion (≤ 10 MB, JPEG/PNG) | Own folder only; deleted by `process-upload`                                    |
 | `avatars`     | `{user}/avatar.jpg` (≤ 2 MB)                         | Write own; signed-in users read via signed URLs                                 |
+| `signatures`  | `{user}/{id}.png` (≤ 1 MB, PNG)                      | Owner only (read, insert, delete); shown through 5-minute signed URLs           |
 
 Files over 6 MB upload through Storage's resumable (TUS) endpoint with progress, cancel and automatic
 resume (`src/features/upload/resumable.ts`).
+
+### Fonts and licences
+
+Typed signatures use three script fonts bundled in [`assets/fonts`](./assets/fonts), all under the
+SIL Open Font License 1.1 (licence files alongside):
+
+| Font                    | Licence file            |
+| ----------------------- | ----------------------- |
+| Dancing Script SemiBold | `OFL-DancingScript.txt` |
+| Great Vibes Regular     | `OFL-GreatVibes.txt`    |
+| Caveat Medium           | `OFL-Caveat.txt`        |
+
+### Skia on web
+
+Signature drawing uses Skia. On web it runs on CanvasKit (wasm), which `npm install` copies to
+`public/canvaskit.wasm` (postinstall `setup-skia-web`; not committed). Skia screens are loaded lazily
+after CanvasKit (`src/lib/skia.web.ts`). Use `npx expo start --web` or a production export; a static
+`expo export --dev` build reloads when it loads those lazy chunks.
 
 ### Behind a TLS-intercepting proxy
 

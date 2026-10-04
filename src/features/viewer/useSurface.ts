@@ -23,9 +23,15 @@ export function useSurface(props: PdfSurfaceProps, ref: Ref<PdfSurfaceHandle> | 
 
   const background = theme.colors.background;
   const pageLabel = t('viewer.pageLabel', { page: '{page}', total: '{total}' });
+  // The theme colour is sent separately, so switching light/dark never reloads the document.
+  const backgroundRef = useRef(background);
   useEffect(() => {
-    if (url) session.send({ type: 'load', url, background, pageLabel, interactive });
-  }, [session, url, background, pageLabel, interactive]);
+    backgroundRef.current = background;
+    session.send({ type: 'setBackground', background });
+  }, [session, background]);
+  useEffect(() => {
+    if (url) session.send({ type: 'load', url, background: backgroundRef.current, pageLabel, interactive });
+  }, [session, url, pageLabel, interactive]);
   useEffect(() => {
     session.send({ type: 'setOverlays', overlays: overlays ?? [] });
   }, [session, overlays]);

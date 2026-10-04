@@ -191,7 +191,8 @@ function SignatureSheetBody({ kind, defaultName, onComplete, onClose }: Signatur
                 <Pressable
                   key={row.id}
                   accessibilityRole="radio"
-                  accessibilityState={{ selected: isSelected, checked: isSelected }}
+                  aria-selected={isSelected}
+                  aria-checked={isSelected}
                   accessibilityLabel={
                     t('signatures.savedItemLabel', {
                       method: t(`signatures.method_${row.method}`),

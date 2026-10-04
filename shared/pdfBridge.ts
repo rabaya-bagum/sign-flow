@@ -56,6 +56,8 @@ export const surfaceCommandSchema = z.discriminatedUnion('type', [
   z.object({ v, type: z.literal('setZoom'), zoom: z.number().min(1).max(4) }),
   z.object({ v, type: z.literal('setOverlays'), overlays: z.array(overlaySchema).max(500) }),
   z.object({ v, type: z.literal('highlight'), id: z.string().max(100).nullable() }),
+  /** Theme change: recolours the surface without reloading the document. */
+  z.object({ v, type: z.literal('setBackground'), background: hexColor }),
 ]);
 
 export const surfaceEventSchema = z.discriminatedUnion('type', [

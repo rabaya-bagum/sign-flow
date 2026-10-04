@@ -16,7 +16,13 @@ export interface RectStyle {
  * Draws a filled rectangle at a displayed fractional rect (SPEC §8.1). Flattening primitive for
  * Phase 6; also used by the coordinate spike and golden tests.
  */
-export function stampRect(doc: PDFDocument, pageIndex: number, rect: FractionalRect, page: PageBox, style: RectStyle) {
+export function stampRect(
+  doc: PDFDocument,
+  pageIndex: number,
+  rect: FractionalRect,
+  page: PageBox,
+  style: RectStyle,
+) {
   const r = fractionRectToPdfRect(page, rect);
   doc.getPage(pageIndex).drawRectangle({
     x: r.x,
@@ -49,13 +55,31 @@ export async function stampImage(
       target.drawImage(image, { x: r.x, y: r.y, width: r.width, height: r.height });
       break;
     case 90:
-      target.drawImage(image, { x: r.x + r.width, y: r.y, width: r.height, height: r.width, rotate: degrees(90) });
+      target.drawImage(image, {
+        x: r.x + r.width,
+        y: r.y,
+        width: r.height,
+        height: r.width,
+        rotate: degrees(90),
+      });
       break;
     case 180:
-      target.drawImage(image, { x: r.x + r.width, y: r.y + r.height, width: r.width, height: r.height, rotate: degrees(180) });
+      target.drawImage(image, {
+        x: r.x + r.width,
+        y: r.y + r.height,
+        width: r.width,
+        height: r.height,
+        rotate: degrees(180),
+      });
       break;
     case 270:
-      target.drawImage(image, { x: r.x, y: r.y + r.height, width: r.height, height: r.width, rotate: degrees(270) });
+      target.drawImage(image, {
+        x: r.x,
+        y: r.y + r.height,
+        width: r.height,
+        height: r.width,
+        rotate: degrees(270),
+      });
       break;
   }
 }

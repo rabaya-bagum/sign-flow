@@ -517,6 +517,9 @@ listen((command) => {
       highlighted = command.id;
       drawOverlays();
       break;
+    case 'setBackground':
+      document.body.style.background = command.background;
+      break;
   }
 });
 

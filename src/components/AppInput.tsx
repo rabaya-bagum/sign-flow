@@ -55,7 +55,7 @@ export function AppInput({
           secureTextEntry={isSecret && !revealed}
           accessibilityLabel={label}
           accessibilityHint={description}
-          accessibilityState={{ disabled: !editable }}
+          aria-disabled={!editable}
           placeholderTextColor={theme.colors.textTertiary}
           onFocus={(e) => {
             setFocused(true);

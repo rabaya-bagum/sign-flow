@@ -1,4 +1,4 @@
-import { act, createRef } from 'react';
+import { act, createRef, useState } from 'react';
 
 import { renderWithProviders } from '@/test/render';
 
@@ -97,6 +97,7 @@ describe('PdfSurface (native)', () => {
         pageLabel: 'Page {page} of {total}',
         interactive: true,
       },
+      { v: 1, type: 'setBackground', background: '#FFFFFF' },
       { v: 1, type: 'setOverlays', overlays },
       { v: 1, type: 'highlight', id: null },
       { v: 1, type: 'setZoom', zoom: 4 },
@@ -116,5 +117,26 @@ describe('PdfSurface (native)', () => {
 
     await message({ v: 1, type: 'error', code: 'PDF_RENDER_FAILED', message: 'Invalid PDF structure' });
     expect(onError).toHaveBeenCalledWith({ code: 'PDF_RENDER_FAILED', message: 'Invalid PDF structure' });
+  });
+
+  it('recolours on theme change without reloading the document', async () => {
+    const { ThemeProvider } = jest.requireActual<typeof import('@/theme')>('@/theme');
+    let setScheme: (scheme: 'light' | 'dark') => void = () => {};
+    function Harness() {
+      const [scheme, set] = useState<'light' | 'dark'>('light');
+      setScheme = set;
+      return (
+        <ThemeProvider scheme={scheme}>
+          <PdfSurface url="https://p.test/doc.pdf?token=t" />
+        </ThemeProvider>
+      );
+    }
+    await renderWithProviders(<Harness />);
+    await message({ v: 1, type: 'ready' });
+    webView.posted = [];
+    await act(async () => setScheme('dark'));
+    const sent = webView.posted.map((raw) => JSON.parse(raw) as { type: string; background?: string });
+    expect(sent.some((m) => m.type === 'load')).toBe(false);
+    expect(sent).toContainEqual({ v: 1, type: 'setBackground', background: '#0E1013' });
   });
 });

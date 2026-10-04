@@ -52,31 +52,31 @@ branding**. No third-party trademarks, icons, layouts, colors, or copyrighted UI
 
 ## 2. Technology stack
 
-| Concern                 | Choice                                                                                                       | Notes                                                                                                                                                                   |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| App                     | React Native + **Expo** (latest stable SDK at project start, record the version in README)                   | **Dev builds via EAS. Expo Go is not supported** (native modules required)                                                                                              |
-| Language                | TypeScript, `strict: true`                                                                                   | No `any` without a justifying comment                                                                                                                                   |
-| Navigation              | Expo Router (file-based)                                                                                     | Also used for the **web export** of the guest signing page                                                                                                              |
-| Server state            | TanStack Query                                                                                               | Query keys centralized in `lib/queryKeys.ts`                                                                                                                            |
-| Client state            | Zustand                                                                                                      | UI/session-only state; never cache server data here                                                                                                                     |
-| Forms                   | React Hook Form + Zod                                                                                        | Zod schemas shared between client and Edge Functions where possible (`/shared`)                                                                                         |
-| Backend                 | Supabase: Postgres, Auth, Storage, Edge Functions (Deno)                                                     | Local dev via Supabase CLI; **all schema changes as migrations**                                                                                                        |
-| Scheduling              | `pg_cron` + `pg_net` → Edge Function                                                                         | Reminders, expiry, cleanup                                                                                                                                              |
-| Email                   | Resend (behind an `EmailProvider` interface)                                                                 | Supabase only sends auth emails; transactional email is ours                                                                                                            |
-| Push                    | `expo-notifications` + Expo Push API (called from Edge Functions)                                            |                                                                                                                                                                         |
-| PDF render (app)        | **pdf.js inside `react-native-webview`** for the editor and signing views; pdf.js directly on web            | One rendering engine = one coordinate system on native and web. `react-native-pdf` is acceptable for plain read-only preview. **Validate with the Phase 3 spike (§20)** |
-| PDF processing (server) | `pdf-lib` in Edge Functions                                                                                  | Page metadata extraction, image→PDF, flattening, certificate generation                                                                                                 |
-| File picking            | `expo-document-picker`, `expo-image-picker`                                                                  |                                                                                                                                                                         |
-| Resumable uploads       | Built-in TUS 1.0 client (`src/features/upload/resumable.ts`) over `expo/fetch`                               | Above 6 MB. `tus-js-client` was not used: on React Native its Blob path re-reads the whole file for every chunk                                                         |
-| Document scan           | `react-native-document-scanner-plugin`                                                                       | Requires a dev build                                                                                                                                                    |
-| Signature canvas        | `react-native-signature-canvas` or a Skia-based canvas                                                       | Must export a transparent PNG and support undo                                                                                                                          |
-| Secure storage          | `expo-secure-store` (with the large-value encrypted-storage pattern for the Supabase session)                |                                                                                                                                                                         |
-| Biometrics              | `expo-local-authentication`                                                                                  | SHOULD                                                                                                                                                                  |
-| Apple / Google sign-in  | `expo-apple-authentication`, `@react-native-google-signin/google-signin` → `supabase.auth.signInWithIdToken` |                                                                                                                                                                         |
-| Haptics                 | `expo-haptics`                                                                                               |                                                                                                                                                                         |
-| i18n                    | `i18next` + `react-i18next`, English only at launch                                                          | All user-facing strings go through `t()` from P1                                                                                                                        |
-| Crash reporting         | Sentry (`@sentry/react-native`)                                                                              | SHOULD, P8                                                                                                                                                              |
-| Testing                 | Jest + React Native Testing Library, pgTAP (DB/RLS), Deno test (Edge Functions), Maestro (E2E)               | See §19                                                                                                                                                                 |
+| Concern                 | Choice                                                                                                                                              | Notes                                                                                                                                                                                                    |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| App                     | React Native + **Expo** (latest stable SDK at project start, record the version in README)                                                          | **Dev builds via EAS. Expo Go is not supported** (native modules required)                                                                                                                               |
+| Language                | TypeScript, `strict: true`                                                                                                                          | No `any` without a justifying comment                                                                                                                                                                    |
+| Navigation              | Expo Router (file-based)                                                                                                                            | Also used for the **web export** of the guest signing page                                                                                                                                               |
+| Server state            | TanStack Query                                                                                                                                      | Query keys centralized in `lib/queryKeys.ts`                                                                                                                                                             |
+| Client state            | Zustand                                                                                                                                             | UI/session-only state; never cache server data here                                                                                                                                                      |
+| Forms                   | React Hook Form + Zod                                                                                                                               | Zod schemas shared between client and Edge Functions where possible (`/shared`)                                                                                                                          |
+| Backend                 | Supabase: Postgres, Auth, Storage, Edge Functions (Deno)                                                                                            | Local dev via Supabase CLI; **all schema changes as migrations**                                                                                                                                         |
+| Scheduling              | `pg_cron` + `pg_net` → Edge Function                                                                                                                | Reminders, expiry, cleanup                                                                                                                                                                               |
+| Email                   | Resend (behind an `EmailProvider` interface)                                                                                                        | Supabase only sends auth emails; transactional email is ours                                                                                                                                             |
+| Push                    | `expo-notifications` + Expo Push API (called from Edge Functions)                                                                                   |                                                                                                                                                                                                          |
+| PDF render (app)        | **One offline pdf.js "surface"** (`web/pdf-surface` → `assets/pdf-surface/surface.html`): `react-native-webview` on native, sandboxed iframe on web | One rendering engine = one coordinate system everywhere (validated by the Phase 3 spike). The surface streams the signed URL itself; documents are never written to disk. Bridge: `/shared/pdfBridge.ts` |
+| PDF processing (server) | `pdf-lib` in Edge Functions                                                                                                                         | Page metadata extraction, image→PDF, flattening, certificate generation                                                                                                                                  |
+| File picking            | `expo-document-picker`, `expo-image-picker`                                                                                                         |                                                                                                                                                                                                          |
+| Resumable uploads       | Built-in TUS 1.0 client (`src/features/upload/resumable.ts`) over `expo/fetch`                                                                      | Above 6 MB. `tus-js-client` was not used: on React Native its Blob path re-reads the whole file for every chunk                                                                                          |
+| Document scan           | `react-native-document-scanner-plugin`                                                                                                              | Requires a dev build                                                                                                                                                                                     |
+| Signature canvas        | `@shopify/react-native-skia` (CanvasKit wasm on web, loaded lazily)                                                                                 | Transparent PNG export, per-stroke undo; the same renderer produces typed and uploaded signatures                                                                                                        |
+| Secure storage          | `expo-secure-store` (with the large-value encrypted-storage pattern for the Supabase session)                                                       |                                                                                                                                                                                                          |
+| Biometrics              | `expo-local-authentication`                                                                                                                         | SHOULD                                                                                                                                                                                                   |
+| Apple / Google sign-in  | `expo-apple-authentication`, `@react-native-google-signin/google-signin` → `supabase.auth.signInWithIdToken`                                        |                                                                                                                                                                                                          |
+| Haptics                 | `expo-haptics`                                                                                                                                      |                                                                                                                                                                                                          |
+| i18n                    | `i18next` + `react-i18next`, English only at launch                                                                                                 | All user-facing strings go through `t()` from P1                                                                                                                                                         |
+| Crash reporting         | Sentry (`@sentry/react-native`)                                                                                                                     | SHOULD, P8                                                                                                                                                                                               |
+| Testing                 | Jest + React Native Testing Library, pgTAP (DB/RLS), Deno test (Edge Functions), Maestro (E2E)                                                      | See §19                                                                                                                                                                                                  |
 
 **Hard rule:** no secret keys in the app bundle. The app only holds the Supabase URL and the **anon key**.
 Service-role keys, Resend keys, and similar live only in Edge Function secrets.
@@ -241,6 +241,11 @@ server-side as soon as step 1's file is uploaded (title defaults to the file nam
 - **Activity:** the per-document audit timeline (§12).
 - **Actions** (status-dependent, §6.2): Sign (if it's your turn) · Remind · Edit recipients (SHOULD) ·
   Download (original / completed / certificate) · Share · Void · Delete.
+- **Preview** `[P3]`: a static render of page 1 that opens the **viewer** (`documents/[id]/view`):
+  continuous scroll with virtualized pages, pinch / double-tap / button zoom (fit-width to 4×), page
+  indicator and page-jump sheet, Share. Each page is announced "Page n of N"; screen-reader users can
+  open the file in another app through Share. The viewer streams the PDF from a short-lived signed URL
+  (`purpose: 'view'`) and keeps no on-disk cache, so there is nothing to clear at logout.
 
 ### 5.5 Signing experience `[P6]` MUST
 
@@ -275,7 +280,12 @@ server-side as soon as step 1's file is uploaded (title defaults to the file nam
 - Tabs: **Draw** (canvas, Clear, Undo, Save) · **Type** (name with 3 script-style fonts that are
   bundled and licensed for embedding) · **Upload** (image; background removed by threshold, cropped).
 - Signature and initials are handled separately.
-- "Save for future use" checkbox. Saved signatures are managed in Account → Signatures.
+- "Save for future use" checkbox, on by default only for the first one of a kind. At most **5 saved per
+  kind** (server-enforced). Saved signatures are managed in Account → Signatures; when any exist, the
+  sheet opens on "Use saved".
+- Output for every method: transparent PNG trimmed to the ink plus 4% padding, long edge 600–1200 px,
+  ≤ 500 KB (scaled down further if needed). Draw rejects trivial input; Upload removes the background
+  with an adjustable threshold. Unsaved signatures live only in the app cache (cleared at sign-out).
 - The output is a transparent PNG. When applied to a document, the image is **copied** into the
   document's storage path, so deleting a saved signature later never changes a signed document.
 
@@ -295,7 +305,8 @@ server-side as soon as step 1's file is uploaded (title defaults to the file nam
 ### 5.10 Account `[P1 basic, P3/P7/P8 full]`
 
 - **Profile** `[P1]`: name, email (read-only, change via a verified flow LATER), photo `[P2]`, phone.
-- **Signatures** `[P3]`: saved signature and initials. Set default, delete.
+- **Signatures** `[P3]`: saved signatures and initials (up to 5 each). Add, set default, delete. Empty
+  state: "Save a signature to sign faster."
 - **Security** `[P8]`: change password, biometric unlock (SHOULD), 2FA TOTP (SHOULD), "Sign out of all
   other devices" (`signOut({ scope: 'others' })`). A full active-sessions list is LATER (no first-class
   client API).
@@ -550,9 +561,11 @@ create table saved_signatures (
   method signature_method not null,
   storage_path text not null,          -- signatures/{user}/{id}.png
   typed_text text, font_key text,
-  is_default boolean not null default false,
+  is_default boolean not null default false,  -- first of a kind; changed via set_default_signature()
   created_at timestamptz not null default now()
 );
+-- One default per (user_id, kind) (partial unique index); max 5 per kind (insert trigger, SQLSTATE
+-- SF001); deleting the default promotes the newest. Clients insert and delete only; no updates.
 
 create table recipient_access_tokens (
   id uuid primary key default gen_random_uuid(),
@@ -666,7 +679,7 @@ create table rate_limits (               -- simple fixed-window limiter for Edge
 | ------------- | ------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `documents`   | No     | `{owner_id}/{document_id}/original.pdf`, `completed.pdf`, `certificate.pdf`, `signing/{recipient_id}/{field_id}.png` | Via Edge Function-issued signed URLs only (TTL ≤ 5 min) | Owner may upload `original.pdf` while the document is `draft`; everything else is service role                                           |
 | `uploads-tmp` | No     | `{user_id}/{uuid}.{ext}`                                                                                             | Owner                                                   | Owner (images/scans awaiting conversion; `process-upload` deletes them; a 24 h sweep for abandoned files arrives with `cron-tick` in P7) |
-| `signatures`  | No     | `{user_id}/{id}.png`                                                                                                 | Owner                                                   | Owner                                                                                                                                    |
+| `signatures`  | No     | `{user_id}/{id}.png` (PNG, ≤ 1 MB)                                                                                   | Owner                                                   | Owner                                                                                                                                    |
 | `avatars`     | No     | `{user_id}/avatar.jpg`                                                                                               | Authenticated users (signed URL)                        | Owner                                                                                                                                    |
 
 Storage RLS policies use `storage.foldername(name)[1] = auth.uid()::text`. Downloads always go through
@@ -821,6 +834,8 @@ friendly, actionable copy.
 | `RATE_LIMITED`                  | Too many requests                                                        | Show the cooldown                                                                      |
 | `INVALID_INPUT`                 | Request failed validation                                                | Field-level error or generic copy                                                      |
 | `NOT_FOUND`                     | Document missing, deleted, or not accessible (existence is not revealed) | Not-found state                                                                        |
+| `SIGNATURE_LIMIT`               | 6th saved signature or initials of a kind                                | Explain the limit; point to Account → Signatures                                       |
+| `SIGNATURE_TOO_SIMPLE`          | Drawn signature too small (dot/scribble) or no ink                       | Inline message in the signature sheet                                                  |
 
 **Offline policy (MVP):** read-only. TanStack Query persisted cache for lists and details. No offline
 signing (it would weaken the audit trail).
@@ -834,7 +849,10 @@ signing (it would weaken the audit trail).
 - Accessibility: every interactive element has `accessibilityLabel`/`Role`. Minimum 44×44 pt touch
   targets. Supports Dynamic Type/font scaling. VoiceOver/TalkBack can complete the full signing flow,
   using **Type** signature as the accessible alternative to drawing. Field reordering has button
-  controls, not only drag.
+  controls, not only drag. Use `aria-*` state props (`aria-checked`, `aria-selected`, `aria-disabled`)
+  rather than `accessibilityState`, which React Native Web does not expose.
+- Device-local data: unsaved signature PNGs live in the app's cache directory (blob URLs on web) and
+  are deleted at sign-out and on account switch. The viewer never writes documents to disk.
 - Empty-state copy:
   - No documents: "You haven't uploaded any documents yet."
   - Needs signature: "You're all caught up. No documents need your signature."
@@ -887,12 +905,13 @@ linked in-app and in the stores. Privacy nutrition labels / data safety forms ar
     /documents            # DocumentCard, filters, list, details
     /upload
     /editor               # FieldToolbar, FieldOverlay, PropertiesSheet
-    /signing              # SignatureCanvas, SignatureSheet, SigningScreen
+    /signatures           # SignatureSheet (Draw/Type/Upload), Account → Signatures, PNG pipeline [P3]
+    /viewer               # PdfSurface (WebView / iframe), SurfaceSession, ViewerScreen [P3]
+    /signing              # SigningScreen
     /recipients           # RecipientCard, RecipientForm
     /activity
     /notifications
     /account
-  /pdf                    # PDFViewer (native: WebView+pdf.js; web: pdf.js), coordinate utils
   /lib                    # supabase client, queryClient, queryKeys, i18n, storage adapter
   /store                  # Zustand stores
   /theme                  # tokens, ThemeProvider, useTheme
@@ -900,7 +919,8 @@ linked in-app and in the stores. Privacy nutrition labels / data safety forms ar
   /utils
   /constants              # copy, legal disclosures, limits
   /types                  # generated Supabase types (supabase gen types) + domain types
-/shared                   # Zod schemas, error codes, field geometry — imported by app AND functions
+/shared                   # Zod schemas, error codes, geometry.ts, pdfBridge.ts — imported by app AND functions
+/web/pdf-surface          # pdf.js surface source; `npm run build:surface` → assets/pdf-surface/surface.html
 /supabase
   /migrations
   /functions              # one folder per Edge Function + _shared/

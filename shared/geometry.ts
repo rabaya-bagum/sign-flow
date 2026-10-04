@@ -48,7 +48,9 @@ export function normalizeRotation(angle: number): Rotation {
 /** Size of the visible box in unrotated user space. */
 export function unrotatedSize(page: PageBox): { width: number; height: number } {
   const swap = page.rotation === 90 || page.rotation === 270;
-  return swap ? { width: page.height_pt, height: page.width_pt } : { width: page.width_pt, height: page.height_pt };
+  return swap
+    ? { width: page.height_pt, height: page.width_pt }
+    : { width: page.width_pt, height: page.height_pt };
 }
 
 /** Displayed fraction point → PDF user-space point. */

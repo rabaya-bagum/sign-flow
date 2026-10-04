@@ -7,8 +7,8 @@ Cross-platform (iOS + Android) e-signature app built with Expo + Supabase.
   [`phase-2.md`](./prompts/phase-2.md), [`phase-3.md`](./prompts/phase-3.md))
 - [`docs/phase-reports/`](./docs/phase-reports): what each phase delivered, test results, open TODOs
 
-**Status:** Phase 3 (PDF viewer & signatures) complete. See the [Phase 1](./docs/phase-reports/phase-1.md),
-[Phase 2](./docs/phase-reports/phase-2.md) and [Phase 3](./docs/phase-reports/phase-3.md) reports.
+**Status:** Phase 4 (field editor) complete. Phase reports: [1](./docs/phase-reports/phase-1.md),
+[2](./docs/phase-reports/phase-2.md), [3](./docs/phase-reports/phase-3.md), [4](./docs/phase-reports/phase-4.md).
 
 ## Stack
 
@@ -94,25 +94,26 @@ via `signflow://auth/callback`.
 
 ## Scripts
 
-| Command                    | What it does                                                                                                             |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `npm run typecheck`        | `tsc --noEmit`                                                                                                           |
-| `npm run lint`             | ESLint (`eslint-config-expo` + Prettier)                                                                                 |
-| `npm test`                 | Jest + React Native Testing Library (unit and component tests)                                                           |
-| `npm run db:start`         | Start the local Supabase stack                                                                                           |
-| `npm run db:reset`         | Recreate the local database from migrations + `seed.sql`                                                                 |
-| `npm run db:test`          | pgTAP tests in `supabase/tests/database` (run `db:reset` first; one file checks seed data)                               |
-| `npm run test:integration` | End-to-end tests against the running stack: auth, Storage/TUS uploads, functions over HTTP (needs `functions:serve`)     |
-| `npm run test:functions`   | Deno tests for Edge Function logic against the local stack (`supabase/functions/tests`), incl. a 25 MB / 200-page timing |
-| `npm run functions:serve`  | Serve Edge Functions locally (hot reload)                                                                                |
-| `npm run fixtures`         | Regenerate PDF/image fixtures and the seed originals (`scripts/generate-fixtures.ts`)                                    |
-| `npm run gen:types`        | Regenerate `src/types/database.ts` from the local schema                                                                 |
-| `npm run build:surface`    | Rebuild the offline PDF surface `assets/pdf-surface/surface.html` from `web/pdf-surface` (commit the result)             |
-| `npm run check:surface`    | Fail if `surface.html` is stale (also covered by Jest)                                                                   |
-| `npm run test:surface`     | PDF surface in Chromium (Playwright): worker + main-thread fallback, errors, invalid commands, taps                      |
-| `npm run test:golden`      | Golden raster test: shapes stamped by `stamp.ts`, rendered by the surface, must land within ±1 pt                        |
-| `npm run check:dev-routes` | Export production bundles (web, Android) and fail if any `/dev/*` screen code is included                                |
-| `npm run functions:deploy` | Deploy the production Edge Functions (explicit list; never `dev-stamp`)                                                  |
+| Command                               | What it does                                                                                                             |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `npm run typecheck`                   | `tsc --noEmit`                                                                                                           |
+| `npm run lint`                        | ESLint (`eslint-config-expo` + Prettier)                                                                                 |
+| `npm test`                            | Jest + React Native Testing Library (unit and component tests)                                                           |
+| `npm run db:start`                    | Start the local Supabase stack                                                                                           |
+| `npm run db:reset`                    | Recreate the local database from migrations + `seed.sql`                                                                 |
+| `npm run db:test`                     | pgTAP tests in `supabase/tests/database` (run `db:reset` first; one file checks seed data)                               |
+| `npm run test:integration`            | End-to-end tests against the running stack: auth, Storage/TUS uploads, functions over HTTP (needs `functions:serve`)     |
+| `npm run test:functions`              | Deno tests for Edge Function logic against the local stack (`supabase/functions/tests`), incl. a 25 MB / 200-page timing |
+| `npm run functions:serve`             | Serve Edge Functions locally (hot reload)                                                                                |
+| `npm run fixtures`                    | Regenerate PDF/image fixtures and the seed originals (`scripts/generate-fixtures.ts`)                                    |
+| `npm run gen:types`                   | Regenerate `src/types/database.ts` from the local schema                                                                 |
+| `npm run build:surface`               | Rebuild the offline PDF surface `assets/pdf-surface/surface.html` from `web/pdf-surface` (commit the result)             |
+| `npm run check:surface`               | Fail if `surface.html` is stale (also covered by Jest)                                                                   |
+| `npm run test:surface`                | PDF surface in Chromium (Playwright): worker + main-thread fallback, errors, invalid commands, taps                      |
+| `npm run test:golden`                 | Golden raster test: shapes stamped by `stamp.ts`, rendered by the surface, must land within ±1 pt                        |
+| `npm run check:dev-routes`            | Export production bundles (web, Android) and fail if any `/dev/*` screen code is included                                |
+| `node tests/e2e/editor-roundtrip.mjs` | Field editor E2E on the web build (port 8081; needs `functions:serve`): place, drag, reload, compare with the DB         |
+| `npm run functions:deploy`            | Deploy the production Edge Functions (explicit list; never `dev-stamp`)                                                  |
 
 After changing a migration: `npm run db:reset && npm run gen:types && npm run db:test`.
 

@@ -272,8 +272,14 @@ server-side as soon as step 1's file is uploaded (title defaults to the file nam
   distinguishable colors, consistent in light and dark).
 - **Properties sheet:** recipient, required, font size (text-like fields), alignment, default value,
   placeholder, validation (text: none/email/number/regex — SHOULD), options (radio/dropdown).
-- Undo/redo: SHOULD.
-- Autosave (debounced) to `document_fields`.
+- Undo/redo: SHOULD (built in P4).
+- Autosave (debounced, 800 ms) to `document_fields` through `save_document_fields(document, fields[])`,
+  which replaces the field set in one transaction. The status reads "Saving…" from the first unsaved
+  change; web warns before unloading with unsaved changes.
+- Accessibility: fields are buttons inside the surface; the properties sheet has move/resize buttons,
+  and "Place in the middle of page n" places the active tool without a precise tap.
+- Placeholder recipients `[P4]`: a draft may have recipients without an email ("Signer 2");
+  `document_recipients.email` is nullable and sending (P5) requires every recipient to have one.
 
 ### 5.7 Signature creation `[P3]` MUST
 
@@ -517,7 +523,7 @@ create table document_recipients (
   document_id uuid not null references documents(id) on delete cascade,
   user_id uuid references profiles(id),  -- linked when an account with this verified email exists
   name text not null,
-  email citext not null,
+  email citext,                        -- null only for a draft's placeholder recipient (P4)
   role recipient_role not null default 'signer',
   signing_order int not null default 1 check (signing_order >= 1),
   status recipient_status not null default 'pending',

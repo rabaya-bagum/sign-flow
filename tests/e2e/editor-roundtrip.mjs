@@ -30,10 +30,18 @@ const fail = (message) => {
 };
 
 // --- Draft with a 4-page mixed-size PDF -------------------------------------------------------------
-const { data: auth, error: authError } = await supabase.auth.signInWithPassword({
-  email: 'owner@signflow.test',
-  password: 'SignFlow-dev-123',
+// A throwaway user, so seed data (checked by pgTAP) is never touched. `npm run db:reset` clears it.
+const email = `editor-e2e.${Date.now()}@signflow.test`;
+const password = 'Editor-e2e-pass1';
+const admin = createClient(status.API_URL, status.SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+const { error: createError } = await admin.auth.admin.createUser({
+  email,
+  password,
+  email_confirm: true,
+  user_metadata: { full_name: 'Editor E2E' },
 });
+if (createError) throw createError;
+const { data: auth, error: authError } = await supabase.auth.signInWithPassword({ email, password });
 if (authError) throw authError;
 const userId = auth.user.id;
 const { data: doc, error: docError } = await supabase
@@ -67,10 +75,10 @@ const tid = (id) => page.locator(`[data-testid="${id}"]`).first();
 await page.goto(APP);
 await tid('onboarding-skip').click();
 await tid('welcome-sign-in').click();
-await tid('sign-in-email').fill('owner@signflow.test');
-await tid('sign-in-password').fill('SignFlow-dev-123');
+await tid('sign-in-email').fill(email);
+await tid('sign-in-password').fill(password);
 await tid('sign-in-submit').click();
-await page.waitForSelector('text=Recent documents', { timeout: 20000 });
+await tid('home-screen').waitFor({ timeout: 20000 });
 
 async function openEditor() {
   await page.goto(`${APP}/documents/${doc.id}/fields`);

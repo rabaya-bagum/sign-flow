@@ -1,7 +1,8 @@
-import { fieldSchema, type Field } from '../../../shared/fields.ts';
+import { type Field, fieldFromRow } from '../../../shared/fields.ts';
 import { ESIGN_DISCLOSURE_VERSION } from '../../../shared/legal.ts';
 import { SIGNED_URL_TTL_SECONDS } from '../../../shared/limits.ts';
 import {
+  choiceMark,
   type FieldEntries,
   type FilledField,
   formatDateSigned,
@@ -14,6 +15,7 @@ import {
 } from '../../../shared/signing.ts';
 import type { RequestContext } from './context.ts';
 import { base64ToBytes, bytesToBase64 } from './crypto.ts';
+import { type DocumentFileKind, documentFilePath, downloadFileName, withDownloadName } from './documents.ts';
 import type { SupabaseClient } from './deps.ts';
 import { emailProvider } from './email/provider.ts';
 import { declinedEmail } from './email/templates.ts';
@@ -200,23 +202,13 @@ function requireState(signer: Signer, allowed: SigningState[]) {
   throw new HttpError('INVALID_STATE', 409, 'This document is no longer waiting for you');
 }
 
-function toField(row: Record<string, unknown>): Field {
-  return fieldSchema.parse({
-    ...row,
-    x: Number(row.x),
-    y: Number(row.y),
-    width: Number(row.width),
-    height: Number(row.height),
-  });
-}
-
 async function loadOwnFields(admin: SupabaseClient, recipientId: string): Promise<Field[]> {
   const { data, error } = await admin
     .from('document_fields')
     .select('id, recipient_id, page_number, type, x, y, width, height, required, properties')
     .eq('recipient_id', recipientId);
   if (error) throw error;
-  return (data ?? []).map(toField);
+  return (data ?? []).map(fieldFromRow);
 }
 
 async function hasConsent(admin: SupabaseClient, recipientId: string): Promise<boolean> {
@@ -229,31 +221,20 @@ async function hasConsent(admin: SupabaseClient, recipientId: string): Promise<b
   return (count ?? 0) > 0;
 }
 
-/** Logs DOCUMENT_VIEWED at most once per person per document per 30 minutes. */
+/** Logs DOCUMENT_VIEWED at most once per person per document per 30 minutes (log_document_view). */
 async function logView(admin: SupabaseClient, signer: Signer) {
   const who = signer.actor;
-  if (who.userId) {
-    const { error } = await admin.rpc('log_document_view', {
-      p_document_id: signer.document.id,
-      p_actor_user_id: who.userId,
-      p_actor_name: who.name,
-      p_actor_email: who.email,
-      p_ip: who.ip,
-      p_user_agent: who.userAgent,
-    });
-    if (error) throw error;
-    return;
-  }
-  const { count } = await admin
-    .from('document_events')
-    .select('id', { count: 'exact', head: true })
-    .eq('document_id', signer.document.id)
-    .eq('actor_recipient_id', signer.recipient.id)
-    .eq('type', 'DOCUMENT_VIEWED')
-    .gt('created_at', new Date(Date.now() - 30 * 60_000).toISOString());
-  if ((count ?? 0) === 0) {
-    await logEventAs(admin, who, signer.document.id, 'DOCUMENT_VIEWED', 'Document viewed', { via: 'link' });
-  }
+  const { error } = await admin.rpc('log_document_view', {
+    p_document_id: signer.document.id,
+    p_actor_user_id: who.userId,
+    p_actor_recipient_id: who.recipientId,
+    p_actor_name: who.name,
+    p_actor_email: who.email,
+    p_ip: who.ip,
+    p_user_agent: who.userAgent,
+    p_metadata: signer.mode === 'guest' ? { via: 'link' } : {},
+  });
+  if (error) throw error;
 }
 
 /** Other people's filled fields, as text or a data: URL image (SPEC §5.5). */
@@ -274,23 +255,24 @@ async function loadFilled(admin: SupabaseClient, signer: Signer): Promise<Filled
     );
   if (fError) throw fError;
   const byId = new Map((fields ?? []).map((f) => [f.id, f]));
+  const assetPaths = [...new Set(data.flatMap((v) => (v.asset_path ? [v.asset_path] : [])))];
+  const images = new Map(
+    await Promise.all(
+      assetPaths.map(async (path): Promise<[string, string | null]> => {
+        const { data: blob } = await admin.storage.from('documents').download(path);
+        return [
+          path,
+          blob ? `data:image/png;base64,${bytesToBase64(new Uint8Array(await blob.arrayBuffer()))}` : null,
+        ];
+      }),
+    ),
+  );
   const out: FilledField[] = [];
   for (const v of data) {
     const f = byId.get(v.field_id);
     if (!f) continue;
-    let image: string | null = null;
-    if (v.asset_path) {
-      const { data: blob } = await admin.storage.from('documents').download(v.asset_path);
-      if (blob) image = `data:image/png;base64,${bytesToBase64(new Uint8Array(await blob.arrayBuffer()))}`;
-    }
-    const text =
-      f.type === 'checkbox' || f.type === 'radio'
-        ? v.value === 'true'
-          ? f.type === 'radio'
-            ? '●'
-            : '✓'
-          : null
-        : v.value;
+    const image = v.asset_path ? (images.get(v.asset_path) ?? null) : null;
+    const text = f.type === 'checkbox' || f.type === 'radio' ? choiceMark(f.type, v.value) : v.value;
     out.push({
       id: f.id,
       page_number: f.page_number,
@@ -329,7 +311,6 @@ export async function openSession(admin: SupabaseClient, signer: Signer): Promis
     recipient: { id: r.id, name: r.name, email: r.email, role: r.role, status: r.status },
     consent_required: false,
     pdf_url: null,
-    pages: [],
     fields: [],
     filled: [],
     waiting_for: [],
@@ -356,26 +337,17 @@ export async function openSession(admin: SupabaseClient, signer: Signer): Promis
     session.recipient.status = 'viewed';
   }
   await logView(admin, signer);
-  const [{ data: pages, error: pError }, signed] = await Promise.all([
-    admin
-      .from('document_pages')
-      .select('page_number, width_pt, height_pt, rotation')
-      .eq('document_id', doc.id)
-      .order('page_number'),
+  const [signed, filled, fields, consented] = await Promise.all([
     admin.storage.from('documents').createSignedUrl(doc.original_path ?? '', SIGNED_URL_TTL_SECONDS),
+    loadFilled(admin, signer),
+    state === 'sign' ? loadOwnFields(admin, r.id) : [],
+    state === 'view' || hasConsent(admin, r.id),
   ]);
-  if (pError) throw pError;
   if (signed.error || !signed.data) throw signed.error ?? new Error('Could not sign URL');
   session.pdf_url = signed.data.signedUrl;
-  session.pages = (pages ?? []).map((p) => ({
-    page_number: p.page_number,
-    width_pt: Number(p.width_pt),
-    height_pt: Number(p.height_pt),
-    rotation: p.rotation,
-  }));
-  session.filled = await loadFilled(admin, signer);
-  if (state === 'sign') session.fields = await loadOwnFields(admin, r.id);
-  if (state !== 'view') session.consent_required = !(await hasConsent(admin, r.id));
+  session.filled = filled;
+  session.fields = fields;
+  session.consent_required = !consented;
   return session;
 }
 
@@ -428,6 +400,15 @@ function decodePng(base64: string): Uint8Array {
   return bytes;
 }
 
+/** Maps the signing functions' SF03x errors; SF032 (bad input) uses `inputStatus`. */
+function signingRpcError(error: { code?: string; message: string }, inputStatus: number): unknown {
+  if (error.code === 'SF030') return new HttpError('NOT_YOUR_TURN', 409, error.message);
+  if (error.code === 'SF031' || error.code === 'SF033')
+    return new HttpError('INVALID_STATE', 409, error.message);
+  if (error.code === 'SF032') return new HttpError('INVALID_INPUT', inputStatus, error.message);
+  return error;
+}
+
 function authMethod(signer: Signer): 'account' | 'link' | 'link_otp' {
   if (signer.mode === 'account') return 'account';
   return signer.document.require_email_otp ? 'link_otp' : 'link';
@@ -445,11 +426,12 @@ export async function submitSigning(
   input: SubmissionInput,
 ): Promise<SubmitSigningResult> {
   const state = requireState(signer, ['sign', 'approve']);
-  if (!(await hasConsent(admin, signer.recipient.id))) {
-    throw new HttpError('INVALID_STATE', 409, 'Agree to sign electronically first');
-  }
   const { document: doc, recipient: r } = signer;
-  const fields = state === 'sign' ? await loadOwnFields(admin, r.id) : [];
+  const [consented, fields] = await Promise.all([
+    hasConsent(admin, r.id),
+    state === 'sign' ? loadOwnFields(admin, r.id) : [],
+  ]);
+  if (!consented) throw new HttpError('INVALID_STATE', 409, 'Agree to sign electronically first');
   const byId = new Map(fields.map((f) => [f.id, f]));
 
   const entries: FieldEntries = {};
@@ -470,25 +452,26 @@ export async function submitSigning(
     );
   }
 
-  // Store images (one per field, in the document's folder) before the transaction.
+  // Store each image once (named after the first field it fills, in the document's folder) before
+  // the transaction; every field using that image points at the same object.
   const now = new Date();
   const uploaded: string[] = [];
   const rows: { field_id: string; value: string | null; asset_path: string | null }[] = [];
-  const decoded = new Map<string, Uint8Array>();
+  const images = new Map<string, { path: string; bytes: Uint8Array }>();
   try {
     for (const field of fields) {
       const entry = input.values.find((v) => v.field_id === field.id);
       if (field.type === 'signature' || field.type === 'initials') {
         if (!entry?.asset || !input.assets[entry.asset]) continue;
-        const bytes = decoded.get(entry.asset) ?? decodePng(input.assets[entry.asset]!);
-        decoded.set(entry.asset, bytes);
-        const path = `${doc.owner_id}/${doc.id}/signing/${r.id}/${field.id}.png`;
-        const { error } = await admin.storage
-          .from('documents')
-          .upload(path, bytes, { contentType: 'image/png', upsert: true });
-        if (error) throw error;
-        uploaded.push(path);
-        rows.push({ field_id: field.id, value: null, asset_path: path });
+        let image = images.get(entry.asset);
+        if (!image) {
+          image = {
+            path: `${doc.owner_id}/${doc.id}/signing/${r.id}/${field.id}.png`,
+            bytes: decodePng(input.assets[entry.asset]!),
+          };
+          images.set(entry.asset, image);
+        }
+        rows.push({ field_id: field.id, value: null, asset_path: image.path });
         continue;
       }
       if (field.type === 'date_signed') {
@@ -507,13 +490,18 @@ export async function submitSigning(
       }
     }
 
+    uploaded.push(...[...images.values()].map((image) => image.path));
+    await Promise.all(
+      [...images.values()].map(async ({ path, bytes }) => {
+        const { error } = await admin.storage
+          .from('documents')
+          .upload(path, bytes, { contentType: 'image/png', upsert: true });
+        if (error) throw error;
+      }),
+    );
+
     const { data, error } = await admin.rpc('complete_recipient', { p_recipient_id: r.id, p_values: rows });
-    if (error) {
-      if (error.code === 'SF030') throw new HttpError('NOT_YOUR_TURN', 409, error.message);
-      if (error.code === 'SF031') throw new HttpError('INVALID_STATE', 409, error.message);
-      if (error.code === 'SF032') throw new HttpError('INVALID_INPUT', 422, error.message);
-      throw error;
-    }
+    if (error) throw signingRpcError(error, 422);
     const result = data as { outcome: 'waiting' | 'advanced' | 'finalize'; activated: ActivatedRecipient[] };
 
     const approved = r.role === 'approver';
@@ -563,13 +551,7 @@ export async function declineSigning(admin: SupabaseClient, signer: Signer, reas
   requireState(signer, ['sign', 'approve']);
   const { document: doc, recipient: r } = signer;
   const { error } = await admin.rpc('decline_recipient', { p_recipient_id: r.id, p_reason: reason });
-  if (error) {
-    if (error.code === 'SF030') throw new HttpError('NOT_YOUR_TURN', 409, error.message);
-    if (error.code === 'SF031' || error.code === 'SF033')
-      throw new HttpError('INVALID_STATE', 409, error.message);
-    if (error.code === 'SF032') throw new HttpError('INVALID_INPUT', 400, error.message);
-    throw error;
-  }
+  if (error) throw signingRpcError(error, 400);
   await logEventAs(admin, signer.actor, doc.id, 'DOCUMENT_DECLINED', `${r.name} declined`, {
     reason: reason.trim(),
     method: authMethod(signer),
@@ -613,10 +595,9 @@ export async function declineSigning(admin: SupabaseClient, signer: Signer, reas
 export async function guestDownload(
   admin: SupabaseClient,
   signer: Signer,
-  kind: 'original' | 'completed' | 'certificate',
+  kind: DocumentFileKind,
 ): Promise<{ url: string; file_name: string }> {
   const doc = signer.document;
-  let path: string | null;
   if (kind === 'original') {
     if (signer.token?.revoked || signer.token?.purpose !== 'sign' || needsOtp(signer)) {
       throw new HttpError('FORBIDDEN', 403, 'This link cannot download the original');
@@ -624,26 +605,20 @@ export async function guestDownload(
     if (signer.recipient.status === 'pending' || signer.recipient.role === 'cc') {
       throw new HttpError('NOT_YOUR_TURN', 409, "It's not your turn yet");
     }
-    path = doc.original_path;
   } else {
     if (doc.status !== 'completed')
       throw new HttpError('INVALID_STATE', 409, 'Available once everyone has signed');
     if (signer.token?.purpose !== 'download')
       throw new HttpError('FORBIDDEN', 403, 'Use the link in the completion email');
-    path = kind === 'completed' ? doc.completed_path : doc.certificate_path;
   }
+  const path = documentFilePath(doc, kind);
   if (!path) throw new HttpError('INVALID_STATE', 409, 'File not available');
-  const base =
-    doc.title
-      .replace(/[\u0000-\u001f\u007f/\\:*?"<>|]+/g, ' ')
-      .trim()
-      .replace(/\.pdf$/i, '') || 'document';
-  const fileName = `${base}${kind === 'certificate' ? ' - certificate' : ''}.pdf`;
+  const fileName = downloadFileName(doc.title, kind);
   const { data, error } = await admin.storage.from('documents').createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
   if (error || !data) throw error ?? new Error('Could not sign URL');
   await logEventAs(admin, signer.actor, doc.id, 'DOCUMENT_DOWNLOADED', 'Document downloaded', {
     kind,
     via: 'link',
   });
-  return { url: `${data.signedUrl}&download=${encodeURIComponent(fileName)}`, file_name: fileName };
+  return { url: withDownloadName(data.signedUrl, fileName), file_name: fileName };
 }

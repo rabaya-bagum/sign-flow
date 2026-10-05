@@ -1,6 +1,6 @@
 import type { Field } from '@shared/fields';
 
-import { bytesToBase64 } from '../api';
+import { bytesToBase64 } from '@/lib/base64';
 import {
   adopt,
   applyImage,
@@ -67,7 +67,7 @@ it('radio choices are exclusive within a group; checkboxes toggle', () => {
 });
 
 it('an adopted signature fills fields and is sent once', () => {
-  const image = adopt(png, 'signature');
+  const image = adopt(png);
   let v = applyImage(EMPTY_VALUES, sig, image);
   v = applyImage(v, sig2, image);
   v = setValue(v, name, 'Ada Lovelace');
@@ -90,7 +90,7 @@ it('an adopted signature fills fields and is sent once', () => {
 });
 
 it('overlays: earlier values first, then own fields highlighted until filled', () => {
-  const v = applyImage(EMPTY_VALUES, sig, adopt(png, 'signature'));
+  const v = applyImage(EMPTY_VALUES, sig, adopt(png));
   const overlays = buildOverlays(
     [sig, name],
     [

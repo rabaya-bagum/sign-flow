@@ -1,6 +1,7 @@
 import { assert, assertEquals, assertRejects } from 'jsr:@std/assert@1';
 
 import { sha256Hex } from '../_shared/crypto.ts';
+import { downloadFileName } from '../_shared/documents.ts';
 import { HttpError } from '../_shared/http.ts';
 import {
   admin,
@@ -13,7 +14,7 @@ import {
   uploadOriginal,
 } from '../_shared/test/harness.ts';
 import { fixture } from '../_shared/test/fixtures.ts';
-import { downloadFileName, getDownloadUrl } from '../get-download-url/logic.ts';
+import { getDownloadUrl } from '../get-download-url/logic.ts';
 import { processUpload } from '../process-upload/logic.ts';
 
 const owner = await createUser('dl-owner');
@@ -113,6 +114,16 @@ Deno.test('downloadFileName strips unsafe characters and adds .pdf', () => {
   assertEquals(downloadFileName('Lease: unit 4/B "final"'), 'Lease unit 4 B final.pdf');
   assertEquals(downloadFileName('report.PDF'), 'report.PDF');
   assertEquals(downloadFileName('   '), 'document.pdf');
+});
+
+Deno.test('downloadFileName keeps the certificate suffix for long titles', () => {
+  const title = `${'a'.repeat(200)}.pdf`;
+  const completed = downloadFileName(title, 'completed');
+  const certificate = downloadFileName(title, 'certificate');
+  assert(certificate.endsWith(' - certificate.pdf'), certificate);
+  assert(certificate !== completed);
+  assert(certificate.length <= 124, `${certificate.length}`);
+  assertEquals(downloadFileName('Lease.pdf', 'certificate'), 'Lease - certificate.pdf');
 });
 
 // --- purpose: 'view' (SPEC §10) -----------------------------------------------------------------

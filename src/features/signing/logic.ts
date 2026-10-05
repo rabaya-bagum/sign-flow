@@ -1,43 +1,58 @@
 import type { Field } from '@shared/fields';
 import type { SurfaceOverlay } from '@shared/pdfBridge';
 import {
+  choiceMark,
   type FieldEntries,
   type FilledField,
   isFilled,
   orderFields,
+  radioGroup,
   requiredProgress,
   validateSubmission,
 } from '@shared/signing';
 
+import { bytesToBase64 } from '@/lib/base64';
+
 import type { Submission } from './api';
-import { bytesToBase64 } from './api';
+
+type ImageKind = 'signature' | 'initials';
 
 /** An image the signer adopted for signature or initials fields. */
 export interface AdoptedImage {
-  key: 'signature' | 'initials';
-  bytes: Uint8Array;
+  base64: string;
   dataUrl: string;
 }
 
 export interface SigningValues {
   entries: FieldEntries;
-  /** Field id → which adopted image fills it. */
-  images: Record<string, 'signature' | 'initials' | undefined>;
-  adopted: Partial<Record<'signature' | 'initials', AdoptedImage>>;
+  /** One image per kind; a field with `hasImage` shows the image of its own type. */
+  adopted: Partial<Record<ImageKind, AdoptedImage>>;
 }
 
-export const EMPTY_VALUES: SigningValues = { entries: {}, images: {}, adopted: {} };
+export const EMPTY_VALUES: SigningValues = { entries: {}, adopted: {} };
 
-export function adopt(bytes: Uint8Array, key: 'signature' | 'initials'): AdoptedImage {
-  return { key, bytes, dataUrl: `data:image/png;base64,${bytesToBase64(bytes)}` };
+export function adopt(bytes: Uint8Array): AdoptedImage {
+  const base64 = bytesToBase64(bytes);
+  return { base64, dataUrl: `data:image/png;base64,${base64}` };
+}
+
+function imageKind(field: Field): ImageKind | null {
+  return field.type === 'signature' || field.type === 'initials' ? field.type : null;
+}
+
+/** The adopted image filling this field, if any. */
+function fieldImage(field: Field, values: SigningValues): AdoptedImage | undefined {
+  const kind = imageKind(field);
+  return kind && values.entries[field.id]?.hasImage ? values.adopted[kind] : undefined;
 }
 
 /** Sets an image field (and records the adopted image for reuse on the signer's other fields). */
 export function applyImage(values: SigningValues, field: Field, image: AdoptedImage): SigningValues {
+  const kind = imageKind(field);
+  if (!kind) return values;
   return {
     entries: { ...values.entries, [field.id]: { hasImage: true } },
-    images: { ...values.images, [field.id]: image.key },
-    adopted: { ...values.adopted, [image.key]: image },
+    adopted: { ...values.adopted, [kind]: image },
   };
 }
 
@@ -49,10 +64,10 @@ export function setValue(values: SigningValues, field: Field, value: string | nu
 export function toggleChoice(values: SigningValues, field: Field, fields: readonly Field[]): SigningValues {
   const on = values.entries[field.id]?.value === 'true';
   if (field.type === 'checkbox') return setValue(values, field, on ? 'false' : 'true');
-  const group = (field.properties as { groupId?: string }).groupId;
+  const group = radioGroup(field);
   const entries = { ...values.entries };
   for (const f of fields) {
-    if (f.type === 'radio' && (f.properties as { groupId?: string }).groupId === group) {
+    if (f.type === 'radio' && radioGroup(f) === group) {
       entries[f.id] = { value: f.id === field.id ? 'true' : 'false' };
     }
   }
@@ -87,7 +102,7 @@ export function fieldText(
   switch (field.type) {
     case 'checkbox':
     case 'radio':
-      return entry?.value === 'true' ? (field.type === 'radio' ? '●' : '✓') : '';
+      return choiceMark(field.type, entry?.value) ?? '';
     case 'date_signed':
       return today;
     case 'signature':
@@ -132,9 +147,8 @@ export function buildOverlays(
   }
   for (const field of orderFields(fields)) {
     const rect = { x: field.x, y: field.y, width: field.width, height: field.height };
-    const imageKey = values.images[field.id];
-    const image = imageKey ? values.adopted[imageKey] : undefined;
-    if (image && values.entries[field.id]?.hasImage) {
+    const image = fieldImage(field, values);
+    if (image) {
       overlays.push({
         id: field.id,
         page: field.page_number,
@@ -177,12 +191,12 @@ export function toSubmission(
   const assets: Record<string, string> = {};
   const out: Submission['values'] = [];
   for (const field of fields) {
-    const imageKey = values.images[field.id];
-    if ((field.type === 'signature' || field.type === 'initials') && imageKey) {
-      const image = values.adopted[imageKey];
+    const kind = imageKind(field);
+    if (kind) {
+      const image = fieldImage(field, values);
       if (!image) continue;
-      assets[imageKey] ??= bytesToBase64(image.bytes);
-      out.push({ field_id: field.id, asset: imageKey });
+      assets[kind] ??= image.base64;
+      out.push({ field_id: field.id, asset: kind });
       continue;
     }
     const entry = values.entries[field.id];

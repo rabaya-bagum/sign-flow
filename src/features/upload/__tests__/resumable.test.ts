@@ -1,4 +1,4 @@
-import { base64Utf8 } from '../base64';
+import { base64Utf8 } from '@/lib/base64';
 import { memorySource } from '../chunkSource';
 import { resumableUpload, ResumableUploadError, UploadAbortedError } from '../resumable';
 

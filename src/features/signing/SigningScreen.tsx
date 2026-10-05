@@ -83,7 +83,6 @@ export function SigningScreen({
 
   const [values, setValues] = useState<SigningValues>(() => ({
     entries: initialEntries(fields, { name: session.recipient.name, email: session.recipient.email }),
-    images: {},
     adopted: {},
   }));
   const [consented, setConsented] = useState(!session.consent_required || mode === 'view');
@@ -119,13 +118,19 @@ export function SigningScreen({
           field,
           values,
           { ...labels, signature: t('signing.tapToSign') },
-          formatDateSigned(now, (field.properties as { format?: 'MMM d, yyyy' }).format, timeZone ?? 'UTC'),
+          field.type === 'date_signed'
+            ? formatDateSigned(
+                now,
+                (field.properties as { format?: 'MMM d, yyyy' }).format,
+                timeZone ?? 'UTC',
+              )
+            : '',
         ),
       (field) => labels[field.type],
     );
   }, [fields, session.filled, values, theme, t, now, timeZone]);
   const count = progress(fields, values);
-  const finishable = mode === 'approve' || canFinish(fields, values);
+  const finishable = canFinish(fields, values);
 
   const requireConsent = (): boolean => {
     if (consented) return true;
@@ -160,44 +165,34 @@ export function SigningScreen({
     if (next) openField(next);
   };
 
-  const agree = async () => {
+  /** Runs a server call with the shared busy flag and error message. */
+  const run = async (action: () => Promise<void>) => {
     setBusy(true);
     setError(null);
     try {
+      await action();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const agree = () =>
+    run(async () => {
       await client.consent();
       setConsented(true);
       setSheet('none');
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  };
+    });
 
-  const submit = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      onSubmitted(await client.submit(toSubmission(fields, values, timeZone)));
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  };
+  const submit = () =>
+    run(async () => onSubmitted(await client.submit(toSubmission(fields, values, timeZone))));
 
-  const declineWith = async (reason: string) => {
-    setBusy(true);
-    setError(null);
-    try {
+  const declineWith = (reason: string) =>
+    run(async () => {
       await client.decline(reason);
       onDeclined();
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  };
+    });
 
   const moreActions: SheetAction[] = [
     ...(mode !== 'view' && session.document.allow_decline
@@ -444,8 +439,7 @@ export function SigningScreen({
           const field = signing;
           setSigning(null);
           if (!field) return;
-          const key = field.type === 'initials' ? 'initials' : 'signature';
-          setValues((v) => applyImage(v, field, adopt(result.bytes, key)));
+          setValues((v) => applyImage(v, field, adopt(result.bytes)));
         }}
         onClose={() => setSigning(null)}
       />

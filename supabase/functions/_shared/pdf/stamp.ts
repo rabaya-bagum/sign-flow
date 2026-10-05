@@ -5,7 +5,7 @@ import {
   type FractionalRect,
   type PageBox,
 } from '../../../../shared/geometry.ts';
-import { degrees, type PDFDocument, type PDFFont, rgb } from '../deps.ts';
+import { degrees, type PDFDocument, type PDFFont, type PDFImage, rgb } from '../deps.ts';
 
 export interface RectStyle {
   /** RGB components 0..1. */
@@ -38,15 +38,16 @@ export function stampRect(
 /**
  * Draws a PNG inside a displayed fractional rect: aspect ratio preserved, centered, and upright as
  * the page is displayed — on rotated pages the image is counter-rotated by the page's /Rotate.
+ * Pass an already embedded image to draw the same PNG several times without re-embedding it.
  */
 export async function stampImage(
   doc: PDFDocument,
   pageIndex: number,
   rect: FractionalRect,
   page: PageBox,
-  pngBytes: Uint8Array,
+  png: Uint8Array | PDFImage,
 ) {
-  const image = await doc.embedPng(pngBytes);
+  const image = png instanceof Uint8Array ? await doc.embedPng(png) : png;
   const fitted = fitAspect(page, rect, image.width / image.height);
   const r = fractionRectToPdfRect(page, fitted);
   const target = doc.getPage(pageIndex);

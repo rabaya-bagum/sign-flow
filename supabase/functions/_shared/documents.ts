@@ -43,3 +43,37 @@ export async function loadOwnedDocument(ctx: RequestContext, documentId: string)
 export function originalPath(ownerId: string, documentId: string): string {
   return `${ownerId}/${documentId}/original.pdf`;
 }
+
+export type DocumentFileKind = 'original' | 'completed' | 'certificate';
+
+export function documentFilePath(
+  doc: Pick<DocumentRow, 'original_path' | 'completed_path' | 'certificate_path'>,
+  kind: DocumentFileKind,
+): string | null {
+  if (kind === 'original') return doc.original_path;
+  return kind === 'completed' ? doc.completed_path : doc.certificate_path;
+}
+
+/** Safe, readable file name: the title without path/control characters, ending in .pdf. */
+export function downloadFileName(title: string, kind: DocumentFileKind = 'original'): string {
+  // Truncate the title before adding the suffix so a long title can't cut it off.
+  const suffix = kind === 'certificate' ? ' - certificate' : '';
+  const source = suffix ? title.replace(/\.pdf$/i, '') : title;
+  const base =
+    source
+      .replace(/[\u0000-\u001f\u007f/\\:*?"<>|]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 120 - suffix.length)
+      .trimEnd() || 'document';
+  const named = base + suffix;
+  return /\.pdf$/i.test(named) ? named : `${named}.pdf`;
+}
+
+/**
+ * Appends the `download` parameter (not covered by the token) encoded exactly once: storage-js's
+ * `download` option double-encodes characters such as parentheses.
+ */
+export function withDownloadName(signedUrl: string, fileName: string): string {
+  return `${signedUrl}&download=${encodeURIComponent(fileName)}`;
+}

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { DATE_FORMATS, fieldPropertiesSchemas, type Field } from './fields.ts';
+import { EMAIL_PATTERN } from './send.ts';
 
 /**
  * Signing rules shared by the signing UI (Phase 6) and submit-signing / guest-submit: what a value
@@ -24,14 +25,13 @@ export interface SubmissionIssue {
 }
 
 export const MAX_VALUE_LENGTH = 500;
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Fields in reading order: page, then top to bottom, then left to right. */
 export function orderFields<T extends Pick<Field, 'page_number' | 'x' | 'y'>>(fields: readonly T[]): T[] {
   return [...fields].sort((a, b) => a.page_number - b.page_number || a.y - b.y || a.x - b.x);
 }
 
-function radioGroup(field: Field): string | null {
+export function radioGroup(field: Pick<Field, 'type' | 'properties'>): string | null {
   if (field.type !== 'radio') return null;
   const groupId = (field.properties as { groupId?: unknown }).groupId;
   return typeof groupId === 'string' ? groupId : null;
@@ -60,7 +60,7 @@ export function normalizeValue(
     case 'radio':
       return value === 'true' || value === 'false' ? { value } : { issue: 'INVALID' };
     case 'email':
-      return EMAIL.test(value) ? { value } : { issue: 'INVALID' };
+      return EMAIL_PATTERN.test(value) ? { value } : { issue: 'INVALID' };
     case 'full_name':
       return { value };
     case 'dropdown': {
@@ -72,7 +72,7 @@ export function normalizeValue(
       if (!parsed.success) return { issue: 'INVALID' };
       const { maxLength, validation } = parsed.data;
       if (maxLength !== undefined && value.length > maxLength) return { issue: 'INVALID' };
-      if (validation === 'email' && !EMAIL.test(value)) return { issue: 'INVALID' };
+      if (validation === 'email' && !EMAIL_PATTERN.test(value)) return { issue: 'INVALID' };
       if (validation === 'number' && !/^-?\d+([.,]\d+)?$/.test(value)) return { issue: 'INVALID' };
       if (typeof validation === 'object') {
         try {
@@ -84,6 +84,12 @@ export function normalizeValue(
       return { value };
     }
   }
+}
+
+/** How a checked checkbox or chosen radio option shows while signing; null when not checked. */
+export function choiceMark(type: 'checkbox' | 'radio', value: string | null | undefined): string | null {
+  if (value !== 'true') return null;
+  return type === 'radio' ? '●' : '✓';
 }
 
 /** True when this field counts as filled for the "required" rule. */
@@ -299,13 +305,6 @@ export interface FilledField {
   image: string | null;
 }
 
-export interface SigningPage {
-  page_number: number;
-  width_pt: number;
-  height_pt: number;
-  rotation: number;
-}
-
 export interface SigningSession {
   state: SigningState;
   document: {
@@ -328,7 +327,6 @@ export interface SigningSession {
   consent_required: boolean;
   /** Content, for 'sign', 'approve' and 'view' only. */
   pdf_url: string | null;
-  pages: SigningPage[];
   fields: Field[];
   filled: FilledField[];
   /** 'not_your_turn': who the document is waiting for. */

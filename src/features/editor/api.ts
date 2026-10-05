@@ -1,4 +1,4 @@
-import { fieldSchema, type Field } from '@shared/fields';
+import { type Field, fieldFromRow } from '@shared/fields';
 
 import { toAppError } from '@/lib/errors';
 import { supabase } from '@/lib/supabase';
@@ -13,17 +13,7 @@ export async function fetchFields(documentId: string): Promise<Field[]> {
     .order('created_at')
     .order('id');
   if (error) throw toAppError(error);
-  return data
-    .filter((row) => row.type !== 'stamp')
-    .map((row) =>
-      fieldSchema.parse({
-        ...row,
-        x: Number(row.x),
-        y: Number(row.y),
-        width: Number(row.width),
-        height: Number(row.height),
-      }),
-    );
+  return data.filter((row) => row.type !== 'stamp').map(fieldFromRow);
 }
 
 /** Replaces the document's fields in one transaction (save_document_fields). */

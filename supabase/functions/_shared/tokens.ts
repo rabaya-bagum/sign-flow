@@ -27,38 +27,47 @@ export async function issueToken(
     .eq('recipient_id', recipientId)
     .is('revoked_at', null);
   if (revokeError) throw revokeError;
+  return await insertToken(admin, recipientId, expiresAt, 'sign');
+}
+
+async function insertToken(
+  admin: SupabaseClient,
+  recipientId: string,
+  expiresAt: string,
+  purpose: 'sign' | 'download',
+): Promise<string> {
   const token = newToken();
-  const { error } = await admin
-    .from('recipient_access_tokens')
-    .insert({ recipient_id: recipientId, token_hash: await hashToken(token), expires_at: expiresAt });
+  const { error } = await admin.from('recipient_access_tokens').insert({
+    recipient_id: recipientId,
+    token_hash: await hashToken(token),
+    expires_at: expiresAt,
+    purpose,
+  });
   if (error) throw error;
   return token;
 }
 
-/** Public signing link (SPEC §4: /s/<token>); PUBLIC_SIGNING_URL is the web app's origin. */
-export function signingLink(token: string): string {
+/** A page of the web app; PUBLIC_SIGNING_URL is its origin. */
+function publicUrl(path: string): string {
   const base = (Deno.env.get('PUBLIC_SIGNING_URL') ?? 'http://localhost:8081').replace(/\/+$/, '');
-  return `${base}/s/${token}`;
+  return `${base}${path}`;
+}
+
+/** Public signing link (SPEC §4: /s/<token>). */
+export function signingLink(token: string): string {
+  return publicUrl(`/s/${token}`);
 }
 
 /** Days a completion download link works (SPEC §7: guests download the signed copy by link). */
 export const DOWNLOAD_TOKEN_DAYS = 30;
 
 /** Issues a download-only token (purpose 'download'), e.g. for the completion email. */
-export async function issueDownloadToken(admin: SupabaseClient, recipientId: string): Promise<string> {
-  const token = newToken();
-  const { error } = await admin.from('recipient_access_tokens').insert({
-    recipient_id: recipientId,
-    token_hash: await hashToken(token),
-    expires_at: new Date(Date.now() + DOWNLOAD_TOKEN_DAYS * 86_400_000).toISOString(),
-    purpose: 'download',
-  });
-  if (error) throw error;
-  return token;
+export function issueDownloadToken(admin: SupabaseClient, recipientId: string): Promise<string> {
+  const expiresAt = new Date(Date.now() + DOWNLOAD_TOKEN_DAYS * 86_400_000).toISOString();
+  return insertToken(admin, recipientId, expiresAt, 'download');
 }
 
 /** Web app page of a document, for people with an account (completion emails). */
 export function documentLink(documentId: string): string {
-  const base = (Deno.env.get('PUBLIC_SIGNING_URL') ?? 'http://localhost:8081').replace(/\/+$/, '');
-  return `${base}/documents/${documentId}`;
+  return publicUrl(`/documents/${documentId}`);
 }

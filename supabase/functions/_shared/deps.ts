@@ -6,6 +6,7 @@ export {
   EncryptedPDFError,
   PDFDocument,
   type PDFFont,
+  type PDFImage,
   rgb,
   StandardFonts,
 } from 'npm:pdf-lib@1.17.1';

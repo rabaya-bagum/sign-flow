@@ -76,7 +76,6 @@ function session(overrides: Partial<SigningSession> = {}): SigningSession {
     },
     consent_required: true,
     pdf_url: 'https://storage.test/original.pdf?token=x',
-    pages: [{ page_number: 1, width_pt: 612, height_pt: 792, rotation: 0 }],
     fields: [sigField, nameField],
     filled: [],
     waiting_for: [],

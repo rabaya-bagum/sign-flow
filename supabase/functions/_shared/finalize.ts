@@ -2,7 +2,8 @@ import { fieldPropertiesSchemas, type FieldType } from '../../../shared/fields.t
 import type { PageBox } from '../../../shared/geometry.ts';
 import { normalizeRotation } from '../../../shared/geometry.ts';
 import { bytesToBase64, sha256Hex } from './crypto.ts';
-import { PDFDocument, type SupabaseClient, StandardFonts } from './deps.ts';
+import { downloadFileName } from './documents.ts';
+import { PDFDocument, type PDFImage, type SupabaseClient, StandardFonts } from './deps.ts';
 import { type EmailAttachment, emailProvider } from './email/provider.ts';
 import { completedEmail } from './email/templates.ts';
 import { logEventAs, SYSTEM_ACTOR } from './events.ts';
@@ -47,6 +48,7 @@ interface FieldRow {
 /**
  * Flattens every value into a copy of the original PDF (SPEC §10 finalize-document): signatures and
  * initials as images, text as text (upright on rotated pages), checkboxes as ✔ and radio choices as ●.
+ * Values that share one image (the same Uint8Array) embed it once.
  */
 export async function flatten(
   original: Uint8Array,
@@ -56,13 +58,19 @@ export async function flatten(
   const pdf = await PDFDocument.load(original);
   const helvetica = await pdf.embedFont(StandardFonts.Helvetica);
   const dingbats = await pdf.embedFont(StandardFonts.ZapfDingbats);
+  const embedded = new Map<Uint8Array, PDFImage>();
   for (const { field, value, image } of values) {
     const page = pages.get(field.page_number);
     if (!page) continue;
     const index = field.page_number - 1;
     const rect = { x: field.x, y: field.y, width: field.width, height: field.height };
     if (image) {
-      await stampImage(pdf, index, rect, page, image);
+      let embeddedImage = embedded.get(image);
+      if (!embeddedImage) {
+        embeddedImage = await pdf.embedPng(image);
+        embedded.set(image, embeddedImage);
+      }
+      await stampImage(pdf, index, rect, page, embeddedImage);
       continue;
     }
     if (!value) continue;
@@ -160,37 +168,46 @@ export async function finalizeDocument(admin: SupabaseClient, documentId: string
       { ...f, x: Number(f.x), y: Number(f.y), width: Number(f.width), height: Number(f.height) } as FieldRow,
     ]),
   );
+  const assetPaths = [
+    ...new Set((valuesRes.data ?? []).flatMap((v) => (v.asset_path ? [v.asset_path] : []))),
+  ];
+  const [original, assetBytes] = await Promise.all([
+    download(admin, doc.original_path),
+    Promise.all(assetPaths.map((path) => download(admin, path))),
+  ]);
+  const images = new Map(assetPaths.map((path, i) => [path, assetBytes[i]!]));
   const values = [];
   for (const v of valuesRes.data ?? []) {
     const field = fields.get(v.field_id);
     if (!field) continue;
-    values.push({ field, value: v.value, image: v.asset_path ? await download(admin, v.asset_path) : null });
+    values.push({ field, value: v.value, image: v.asset_path ? images.get(v.asset_path)! : null });
   }
-  const original = await download(admin, doc.original_path);
   const completed = await flatten(original, pages, values);
   const completedSha256 = await sha256Hex(completed);
   const originalSha256 = doc.original_sha256 ?? (await sha256Hex(original));
 
   // --- Certificate -----------------------------------------------------------------------------------
-  const { data: events, error: eventsError } = await admin
-    .from('document_events')
-    .select(
-      'created_at, type, description, actor_name, actor_email, actor_recipient_id, ip, user_agent, metadata',
-    )
-    .eq('document_id', doc.id)
-    .order('created_at')
-    .order('id');
+  const [{ data: events, error: eventsError }, { data: consents, error: consentsError }] = await Promise.all([
+    admin
+      .from('document_events')
+      .select(
+        'created_at, type, description, actor_name, actor_email, actor_recipient_id, ip, user_agent, metadata',
+      )
+      .eq('document_id', doc.id)
+      .order('created_at')
+      .order('id'),
+    admin
+      .from('esign_consents')
+      .select('recipient_id, disclosure_version, accepted_at')
+      .in(
+        'recipient_id',
+        recipients.map((r) => r.id),
+      )
+      .order('accepted_at'),
+  ]);
   if (eventsError) throw eventsError;
-  const completedAt = new Date().toISOString();
-  const { data: consents, error: consentsError } = await admin
-    .from('esign_consents')
-    .select('recipient_id, disclosure_version, accepted_at')
-    .in(
-      'recipient_id',
-      recipients.map((r) => r.id),
-    )
-    .order('accepted_at');
   if (consentsError) throw consentsError;
+  const completedAt = new Date().toISOString();
   const certificate: CertificateData = {
     documentId: doc.id,
     title: doc.title,
@@ -244,8 +261,10 @@ export async function finalizeDocument(admin: SupabaseClient, documentId: string
 
   // --- Store and complete ----------------------------------------------------------------------------
   const base = `${doc.owner_id}/${doc.id}`;
-  await upload(admin, `${base}/completed.pdf`, completed);
-  await upload(admin, `${base}/certificate.pdf`, certificateBytes);
+  await Promise.all([
+    upload(admin, `${base}/completed.pdf`, completed),
+    upload(admin, `${base}/certificate.pdf`, certificateBytes),
+  ]);
   const { data: marked, error: markError } = await admin.rpc('mark_document_completed', {
     p_document_id: doc.id,
     p_completed_path: `${base}/completed.pdf`,
@@ -268,9 +287,13 @@ export async function finalizeDocument(admin: SupabaseClient, documentId: string
   const attach = completed.length + certificateBytes.length <= MAX_ATTACHMENT_BYTES;
   const attachments: EmailAttachment[] = attach
     ? [
-        { filename: pdfName(doc.title), contentType: 'application/pdf', content: bytesToBase64(completed) },
         {
-          filename: pdfName(`${doc.title} - certificate`),
+          filename: downloadFileName(doc.title),
+          contentType: 'application/pdf',
+          content: bytesToBase64(completed),
+        },
+        {
+          filename: downloadFileName(doc.title, 'certificate'),
           contentType: 'application/pdf',
           content: bytesToBase64(certificateBytes),
         },
@@ -325,14 +348,4 @@ export async function finalizeDocument(admin: SupabaseClient, documentId: string
     }
   }
   return { completed: true, completedSha256 };
-}
-
-function pdfName(title: string): string {
-  const base =
-    title
-      .replace(/[\u0000-\u001f\u007f/\\:*?"<>|]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 120) || 'document';
-  return /\.pdf$/i.test(base) ? base : `${base}.pdf`;
 }

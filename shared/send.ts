@@ -28,7 +28,7 @@ export type SendIssue =
 
 export type SendIssueCode = SendIssue['code'];
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function validateForSend(input: {
   hasFile: boolean;
@@ -45,7 +45,7 @@ export function validateForSend(input: {
   for (const r of recipients) {
     const email = r.email?.trim().toLowerCase() ?? '';
     if (!email) issues.push({ code: 'MISSING_EMAIL', recipientId: r.id });
-    else if (!EMAIL.test(email)) issues.push({ code: 'INVALID_EMAIL', recipientId: r.id });
+    else if (!EMAIL_PATTERN.test(email)) issues.push({ code: 'INVALID_EMAIL', recipientId: r.id });
     else if (seen.has(email)) issues.push({ code: 'DUPLICATE_EMAIL', recipientId: r.id });
     else seen.add(email);
 

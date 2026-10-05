@@ -115,17 +115,18 @@ export function DocumentDetailsScreen() {
   };
   const keys = availableActions(target, { includeOpen: false, canSave: canSaveToDevice });
   const isDraftOwner = doc.status === 'draft' && doc.isOwner;
-  // The caller's own turn to sign or approve (SPEC §6.3 "Needs your signature").
+  // The caller's own turn to sign or approve (SPEC §6.3, decided by the server); the recipient row
+  // only picks the Sign or Approve label.
   const myTurn =
-    doc.status === 'in_progress'
-      ? recipients.data?.find(
+    doc.displayStatus === 'needs_signature'
+      ? (recipients.data?.find(
           (r) =>
             r.userId !== null &&
             r.userId === userId &&
             (r.role === 'signer' || r.role === 'approver') &&
             (r.status === 'sent' || r.status === 'viewed'),
-        )
-      : undefined;
+        ) ?? null)
+      : null;
 
   return (
     <Screen

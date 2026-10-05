@@ -873,9 +873,11 @@ export type Database = {
         Args: {
           p_actor_email?: string;
           p_actor_name?: string;
+          p_actor_recipient_id?: string;
           p_actor_user_id: string;
           p_document_id: string;
           p_ip?: unknown;
+          p_metadata?: Json;
           p_user_agent?: string;
           p_window?: string;
         };

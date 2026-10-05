@@ -110,6 +110,17 @@ export const fieldSchema = z
   });
 export type Field = z.output<typeof fieldSchema>;
 
+/** Parses a `document_fields` row; Postgres numerics arrive as strings. */
+export function fieldFromRow(row: Record<string, unknown>): Field {
+  return fieldSchema.parse({
+    ...row,
+    x: Number(row.x),
+    y: Number(row.y),
+    width: Number(row.width),
+    height: Number(row.height),
+  });
+}
+
 /** Default properties for a new field of this type. */
 export function defaultProperties(
   type: FieldType,
